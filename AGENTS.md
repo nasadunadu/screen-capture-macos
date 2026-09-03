@@ -14,7 +14,13 @@
 
 ## Validation
 
-Use the full Xcode developer directory without changing the workstation-wide selection:
+Run the complete local validation before a release or pull request:
+
+```sh
+./scripts/ci.sh
+```
+
+For a focused build, use the full Xcode developer directory without changing the workstation-wide selection:
 
 ```sh
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
@@ -33,6 +39,8 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
   -destination 'platform=macOS' \
   CODE_SIGNING_ALLOWED=NO test
 ```
+
+Direct-distribution builds must also pass `docs/RELEASE_CHECKLIST.md`. Never treat a development-signed or ad-hoc app as a public release artifact.
 
 ## Review Rules
 

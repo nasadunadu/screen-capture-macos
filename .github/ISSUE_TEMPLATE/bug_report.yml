@@ -1,0 +1,74 @@
+name: Bug report
+description: Report a reproducible Screen Capture problem.
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for the report. Remove private content from screenshots and logs before attaching them. Security and privacy vulnerabilities must be reported privately through the Security tab.
+  - type: input
+    id: version
+    attributes:
+      label: Screen Capture version
+      placeholder: 0.4.7 (23)
+    validations:
+      required: true
+  - type: input
+    id: macos
+    attributes:
+      label: macOS and Mac
+      placeholder: macOS 26.6, MacBook Pro M4, one Retina display
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      options:
+        - Region capture
+        - Window or full-screen capture
+        - Annotation
+        - Scrolling capture
+        - Export or clipboard
+        - Permissions
+        - Settings or shortcuts
+        - Launch or menu bar
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Include the smallest reliable sequence and whether the problem occurs every time.
+      placeholder: |
+        1. Start region capture…
+        2. Select…
+        3. Observe…
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected result
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual result
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Add sanitized screenshots, display scaling, target application, and permission state when relevant.
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy confirmation
+      options:
+        - label: I removed private, customer, credential, and account information from all attachments.
+          required: true

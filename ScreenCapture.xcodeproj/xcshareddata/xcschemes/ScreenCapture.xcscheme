@@ -44,7 +44,9 @@
       shouldUseLaunchSchemeArgsEnv = "YES"
       shouldAutocreateTestPlan = "YES">
       <Testables>
-         <TestableReference skipped = "NO" parallelizable = "YES">
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "0A0000000000000000000003"
@@ -65,7 +67,8 @@
       debugDocumentVersioning = "YES"
       debugServiceExtension = "internal"
       allowLocationSimulation = "YES">
-      <BuildableProductRunnable runnableDebuggingMode = "0">
+      <BuildableProductRunnable
+         runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "0A0000000000000000000002"
@@ -75,8 +78,14 @@
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
-   <ProfileAction buildConfiguration = "Release" shouldUseLaunchSchemeArgsEnv = "YES" savedToolIdentifier = "" useCustomWorkingDirectory = "NO" debugDocumentVersioning = "YES">
-      <BuildableProductRunnable runnableDebuggingMode = "0">
+   <ProfileAction
+      buildConfiguration = "Release"
+      shouldUseLaunchSchemeArgsEnv = "YES"
+      savedToolIdentifier = ""
+      useCustomWorkingDirectory = "NO"
+      debugDocumentVersioning = "YES">
+      <BuildableProductRunnable
+         runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "0A0000000000000000000002"
@@ -86,6 +95,11 @@
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>
-   <AnalyzeAction buildConfiguration = "Debug"/>
-   <ArchiveAction buildConfiguration = "Release" revealArchiveInOrganizer = "YES"/>
+   <AnalyzeAction
+      buildConfiguration = "Debug">
+   </AnalyzeAction>
+   <ArchiveAction
+      buildConfiguration = "Release"
+      revealArchiveInOrganizer = "YES">
+   </ArchiveAction>
 </Scheme>

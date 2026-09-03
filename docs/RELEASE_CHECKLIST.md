@@ -4,6 +4,7 @@ Screen Capture is distributed directly to the team rather than through the Mac A
 
 ## Automated gates
 
+- The public repository has an explicit license, community files, and passing CI.
 - The repository is clean and the release commit is identified.
 - `plutil -lint` succeeds for `Info.plist` and `PrivacyInfo.xcprivacy`.
 - The complete unit test suite passes with code signing disabled.
@@ -47,9 +48,13 @@ An Apple Development-signed build, an ad-hoc build, or an artifact rejected by G
 ## GitHub handoff
 
 - Review `.gitignore`, repository contents, secrets, personal paths, logs, crash reports, screenshots, DerivedData, and build products before upload.
-- Choose repository visibility before creation. If public distribution is approved, choose and add an explicit open-source license before publishing.
+- Add release comparison links after the final GitHub owner and repository name are known.
+- Replace the development bundle identifier with a stable reverse-DNS identifier controlled by the release owner.
+- Confirm that the application name and icon artwork are approved for public distribution.
+- Confirm Apache-2.0 as the intended public license with the company account owner.
+- Confirm the default branch contains the complete source and requires the CI status check.
 - Publish release notes that list the supported macOS versions, permissions, known limits, checksum, and rollback version.
-- Start with a private team repository unless public visibility is explicitly approved.
+- Use `docs/RELEASE_NOTES_TEMPLATE.md` for the first GitHub Release.
 - Never push, create a release, or change repository visibility without explicit authorization for that action.
 
 ## Rollback
