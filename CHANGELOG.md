@@ -6,6 +6,13 @@ All notable changes to this project will be documented in this file.
 
 No user-visible changes yet.
 
+## [0.4.8] - 2026-09-03
+
+### Fixed
+
+- Kept the annotation toolbar persistently above the canvas while drawing rectangles, arrows, lines, and other tools.
+- Added a regression test covering toolbar z-order, child-window ownership, and deactivate behavior.
+
 ## [0.4.7] - 2026-09-03
 
 ### Added

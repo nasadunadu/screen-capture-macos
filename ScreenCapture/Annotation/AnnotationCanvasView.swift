@@ -11,6 +11,7 @@ final class AnnotationCanvasView: NSView, NSTextFieldDelegate {
     let document: AnnotationDocument
     var onConfirm: (() -> Void)?
     var onCancel: (() -> Void)?
+    var onInteraction: (() -> Void)?
 
     private var activeElementID: UUID?
     private var dragStart: CGPoint?
@@ -50,6 +51,7 @@ final class AnnotationCanvasView: NSView, NSTextFieldDelegate {
     override func mouseDown(with event: NSEvent) {
         window?.makeKey()
         window?.makeFirstResponder(self)
+        onInteraction?()
         let point = convert(event.locationInWindow, from: nil)
         if event.clickCount == 2,
            let hit = hitTestElement(at: point),
