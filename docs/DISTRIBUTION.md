@@ -1,6 +1,6 @@
 # Direct distribution
 
-This project distributes the macOS app outside the Mac App Store. Source availability and binary release readiness are separate gates: a source commit may be public while a downloadable app remains a prerelease.
+This personal open-source project distributes the macOS app outside the Mac App Store. Source availability and binary release readiness are separate gates: a source commit may be public while a downloadable app remains a prerelease.
 
 ## Release inputs
 

@@ -1,6 +1,6 @@
 # Release checklist
 
-Screen Capture is distributed directly to the team rather than through the Mac App Store. A release is complete only when the source, archive, signed artifact, notarization result, and manual smoke test all refer to the same version.
+Screen Capture is an independently maintained personal open-source project distributed directly to users rather than through the Mac App Store. A release is complete only when the source, archive, signed artifact, notarization result, and manual smoke test all refer to the same version.
 
 ## Automated gates
 
@@ -21,8 +21,8 @@ Test the actual archived Release build outside Xcode and without a debugger.
 
 | Area | Required coverage |
 | --- | --- |
-| Hardware | Apple silicon; Intel if the team still uses it |
-| macOS | Oldest supported macOS 14; current team macOS; latest available macOS |
+| Hardware | Apple silicon; Intel while universal binaries are published |
+| macOS | Oldest supported macOS 14; maintainer's current macOS; latest available macOS |
 | Displays | Retina and non-Retina; one display; mixed-scale multi-display |
 | Permission | Fresh install denied, grant and retry, revoked permission, app relaunch |
 | Capture | Region, resize/move region, window, full screen, previous area, preset, delay |
@@ -35,7 +35,7 @@ For long capture, confirm native pixel width, no duplicated or missing seams, no
 
 ## Direct-distribution signing and notarization
 
-1. Install a valid **Developer ID Application** certificate for the release team.
+1. Install a valid **Developer ID Application** certificate controlled by the project maintainer.
 2. In Xcode, archive with the generic macOS destination and export using **Developer ID** distribution.
 3. Keep Hardened Runtime enabled and use a secure timestamp.
 4. Submit the exported archive with Xcode or `notarytool` and wait for an accepted result.
@@ -51,7 +51,7 @@ An Apple Development-signed build, an ad-hoc build, or an artifact rejected by G
 - Add release comparison links after the final GitHub owner and repository name are known.
 - Replace the development bundle identifier with a stable reverse-DNS identifier controlled by the release owner.
 - Confirm that the application name and icon artwork are approved for public distribution.
-- Confirm Apache-2.0 as the intended public license with the company account owner.
+- Confirm the intended public license with the individual project owner.
 - Confirm the default branch contains the complete source and requires the CI status check.
 - Publish release notes that list the supported macOS versions, permissions, known limits, checksum, and rollback version.
 - Use `docs/RELEASE_NOTES_TEMPLATE.md` for the first GitHub Release.

@@ -42,7 +42,7 @@ Screen recording, audio recording, translation, OCR, accounts, telemetry, and cl
 
 ## Project status
 
-`0.4.7` is the first public-release candidate. The source builds and its automated suite pass on macOS, but downloadable releases are not considered official until they are Developer ID signed, notarized, stapled, and verified with Gatekeeper.
+`0.4.7` is the first public-release candidate for this independently maintained personal open-source project. The source builds and its automated suite pass on macOS, but downloadable releases are not considered official until they are Developer ID signed, notarized, stapled, and verified with Gatekeeper.
 
 ## Requirements
 
@@ -110,3 +110,5 @@ Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request. Please re
 ## License
 
 Licensed under the [Apache License 2.0](LICENSE).
+
+Screen Capture is an independent personal project and is not affiliated with or endorsed by Apple or iShot.

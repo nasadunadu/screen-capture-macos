@@ -43,7 +43,7 @@ Screen Capture 专注两个高频任务：快速完成带标注的普通截图�
 
 ## 当前状态
 
-`0.4.7` 是第一个公开发布候选版本。源码构建与自动化测试已经通过；可下载版本只有在完成 Developer ID 签名、Apple 公证、票据附加与 Gatekeeper 验证后，才会被标记为正式版本。
+`0.4.7` 是这个个人独立维护的开源项目的第一个公开发布候选版本。源码构建与自动化测试已经通过；可下载版本只有在完成 Developer ID 签名、Apple 公证、票据附加与 Gatekeeper 验证后，才会被标记为正式版本。
 
 ## 环境要求
 
@@ -98,3 +98,5 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
 ## 许可证
 
 项目使用 [Apache License 2.0](LICENSE) 开源。
+
+Screen Capture 是个人独立项目，与 Apple 或 iShot 不存在隶属、授权或背书关系。
