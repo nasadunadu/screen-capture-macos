@@ -1,0 +1,14 @@
+.DS_Store
+DerivedData/
+build/
+*.xcuserstate
+xcuserdata/
+*.xccheckout
+*.xcscmblueprint
+*.moved-aside
+*.swp
+*.log
+.env
+.env.*
+Screenshots/
+Exports/
