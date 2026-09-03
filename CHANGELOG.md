@@ -6,6 +6,14 @@ All notable changes to this project will be documented in this file.
 
 No user-visible changes yet.
 
+## [0.4.10] - 2026-09-03
+
+### Fixed
+
+- Kept the selection-stage annotation toolbar inside the screenshot overlay so it remains visible after drawing an arrow, rectangle, line, or other annotation.
+- Removed the separate toolbar-window z-order race that could hide the toolbar when the annotation canvas became key.
+- Preserved toolbar positioning when the selection is adjusted or moved.
+
 ## [0.4.9] - 2026-09-03
 
 ### Fixed
