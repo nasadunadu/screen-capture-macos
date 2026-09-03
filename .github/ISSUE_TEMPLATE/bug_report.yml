@@ -11,7 +11,7 @@ body:
     id: version
     attributes:
       label: Screen Capture version
-      placeholder: 0.4.7 (23)
+      placeholder: 0.4.8 (24)
     validations:
       required: true
   - type: input

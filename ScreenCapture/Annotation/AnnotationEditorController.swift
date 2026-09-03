@@ -10,6 +10,28 @@ struct CaptureContext {
 final class EditorPanel: NSPanel {
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { true }
+
+    override init(
+        contentRect: NSRect,
+        styleMask: NSWindow.StyleMask,
+        backing backingStoreType: NSWindow.BackingStoreType,
+        defer flag: Bool
+    ) {
+        super.init(
+            contentRect: contentRect,
+            styleMask: styleMask,
+            backing: backingStoreType,
+            defer: flag
+        )
+        hidesOnDeactivate = false
+    }
+
+    func keepAbove(_ parent: NSWindow) {
+        if parent.childWindows?.contains(where: { $0 === self }) != true {
+            parent.addChildWindow(self, ordered: .above)
+        }
+        orderFrontRegardless()
+    }
 }
 
 private final class AnnotationDimmingView: NSView {
@@ -95,6 +117,9 @@ final class AnnotationEditorController: NSObject {
         )
         canvas.onConfirm = { [weak self] in self?.finish() }
         canvas.onCancel = { [weak self] in self?.close() }
+        canvas.onInteraction = { [weak self] in
+            self?.toolbarPanel?.orderFrontRegardless()
+        }
         panel.contentView = canvas
         panel.makeKeyAndOrderFront(nil)
         self.canvasPanel = panel
@@ -128,8 +153,10 @@ final class AnnotationEditorController: NSObject {
         toolbarPanel.contentView = toolbarHostingView
         toolbarPanel.orderFront(nil)
         self.toolbarPanel = toolbarPanel
+        toolbarPanel.keepAbove(panel)
         NSApp.activate(ignoringOtherApps: true)
         panel.makeKey()
+        toolbarPanel.orderFrontRegardless()
     }
 
     private func presentDimmingPanels(screenFrame: CGRect, selectionFrame: CGRect) {

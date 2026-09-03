@@ -35,4 +35,30 @@ final class AnnotationToolbarTests: XCTestCase {
         XCTAssertLessThan(size.width, 820)
         XCTAssertLessThanOrEqual(size.height, 64)
     }
+
+    @MainActor
+    func testEditorToolbarPanelStaysAboveCanvasAndDoesNotHideOnDeactivate() {
+        let canvas = EditorPanel(
+            contentRect: CGRect(x: 0, y: 0, width: 320, height: 240),
+            styleMask: [.borderless, .nonactivatingPanel],
+            backing: .buffered,
+            defer: true
+        )
+        let toolbar = EditorPanel(
+            contentRect: CGRect(x: 0, y: 0, width: 320, height: 62),
+            styleMask: [.borderless, .nonactivatingPanel],
+            backing: .buffered,
+            defer: true
+        )
+
+        toolbar.keepAbove(canvas)
+
+        XCTAssertFalse(toolbar.hidesOnDeactivate)
+        XCTAssertTrue(canvas.childWindows?.contains { $0 === toolbar } == true)
+
+        toolbar.orderOut(nil)
+        canvas.orderOut(nil)
+        toolbar.close()
+        canvas.close()
+    }
 }
