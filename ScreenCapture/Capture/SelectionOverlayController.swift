@@ -64,6 +64,9 @@ final class SelectionOverlayController: NSObject {
         view.onSelectionReady = { [weak self] rect in
             self?.presentToolbar(for: rect)
         }
+        view.onInteraction = { [weak self] in
+            self?.keepToolbarVisible()
+        }
         view.onConfirm = { [weak self] in
             guard let self else { return }
             let action: RegionSelectionAction = mode == .longCapture ? .longCapture : .defaultExport
@@ -145,7 +148,7 @@ final class SelectionOverlayController: NSObject {
                 ),
                 display: true
             )
-            toolbarPanel.orderFront(nil)
+            keepToolbarVisible()
             return
         }
 
@@ -192,7 +195,20 @@ final class SelectionOverlayController: NSObject {
         toolbarPanel.contentView = hostingView
         toolbarPanel.orderFront(nil)
         self.toolbarPanel = toolbarPanel
+        if let panel {
+            toolbarPanel.keepAbove(panel)
+        }
         panel?.makeKey()
+        keepToolbarVisible()
+    }
+
+    private func keepToolbarVisible() {
+        guard let toolbarPanel else { return }
+        if let panel {
+            toolbarPanel.keepAbove(panel)
+        } else {
+            toolbarPanel.orderFrontRegardless()
+        }
     }
 
     private func finish(with result: SelectionResult) {
@@ -234,6 +250,7 @@ private final class SelectionOverlayView: NSView {
     private weak var annotationCanvas: AnnotationCanvasView?
     var onResult: ((SelectionResult) -> Void)?
     var onSelectionReady: ((CGRect) -> Void)?
+    var onInteraction: (() -> Void)?
     var onConfirm: (() -> Void)?
     var onCancel: (() -> Void)?
 
@@ -466,6 +483,7 @@ private final class SelectionOverlayView: NSView {
         let canvas = AnnotationCanvasView(image: image, frame: canvasFrame, document: document)
         canvas.onConfirm = { [weak self] in self?.onConfirm?() }
         canvas.onCancel = { [weak self] in self?.onCancel?() }
+        canvas.onInteraction = { [weak self] in self?.onInteraction?() }
         addSubview(canvas)
         annotationCanvas = canvas
         window?.makeFirstResponder(canvas)

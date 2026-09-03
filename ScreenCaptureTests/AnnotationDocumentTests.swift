@@ -179,6 +179,43 @@ final class AnnotationDocumentTests: XCTestCase {
         XCTAssertTrue(canvas.acceptsFirstMouse(for: nil))
     }
 
+    func testCanvasNotifiesToolbarOnFirstDrawingInteraction() throws {
+        let context = try XCTUnwrap(CGContext(
+            data: nil,
+            width: 2,
+            height: 2,
+            bitsPerComponent: 8,
+            bytesPerRow: 0,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ))
+        let image = try XCTUnwrap(context.makeImage())
+        let document = AnnotationDocument()
+        let canvas = AnnotationCanvasView(
+            image: image,
+            frame: CGRect(x: 0, y: 0, width: 100, height: 100),
+            document: document
+        )
+        var notified = false
+        canvas.onInteraction = { notified = true }
+        let event = try XCTUnwrap(NSEvent.mouseEvent(
+            with: .leftMouseDown,
+            location: CGPoint(x: 20, y: 20),
+            modifierFlags: [],
+            timestamp: 0,
+            windowNumber: 0,
+            context: nil,
+            eventNumber: 0,
+            clickCount: 1,
+            pressure: 0
+        ))
+
+        canvas.mouseDown(with: event)
+
+        XCTAssertTrue(notified)
+        XCTAssertEqual(document.elements.count, 1)
+    }
+
     private func element(tool: AnnotationTool) -> AnnotationElement {
         AnnotationElement(
             tool: tool,
