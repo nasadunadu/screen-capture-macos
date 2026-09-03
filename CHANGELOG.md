@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+No user-visible changes yet.
+
+## [0.4.7] - 2026-09-03
+
 ### Added
 
 - Initial native macOS project and first screenshot MVP scope.

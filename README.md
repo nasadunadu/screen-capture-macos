@@ -1,33 +1,60 @@
-# Screen Capture
+<p align="center">
+  <img src="ScreenCapture/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon-256.png" width="128" alt="Screen Capture app icon">
+</p>
 
-A local-first, native macOS screenshot application for fast region/window/full-screen capture, inline annotation, and scrolling screenshots.
+<h1 align="center">Screen Capture for macOS</h1>
 
-## Status
+<p align="center">
+  A private-by-design, native screenshot and scrolling-capture utility.<br>
+  Retina pixels in, clean PNGs out.
+</p>
 
-Release-candidate hardening for the first team version. Direct distribution is not complete until the archived app is Developer ID signed, notarized, stapled, and accepted by Gatekeeper.
+<p align="center">
+  <a href="README.zh-CN.md">简体中文</a> ·
+  <a href="docs/PRIVACY.md">Privacy</a> ·
+  <a href="CONTRIBUTING.md">Contributing</a> ·
+  <a href="LICENSE">Apache-2.0</a>
+</p>
 
-## Product scope
+## Why Screen Capture?
 
-- Region, window, and full-screen capture
-- Retina-native pixel capture for sharp high-resolution output
-- Previous-area, preset-size, and delayed capture
-- Inline shapes, arrows, pen, text, and spotlight
-- Undo/redo and element selection/movement
-- Clipboard, PNG/JPEG file export, and Save As
-- iShot-style scrolling workspace with a live left-hand viewport, borderless stitched preview on the right, and a compact floating action bar
-- Fixed-size ScreenCaptureKit stream, live Vision alignment, and deterministic long-image stitching
-- Native-resolution long capture with self-window exclusion, incremental memory use, and system-wide `Escape` cancellation
-- Silent-launch Dock app with a persistent menu-bar status item, editable global shortcuts, and on-demand native settings
+Screen Capture is built for two everyday jobs: a fast annotated screenshot and a reliable long screenshot. It is a real native macOS app made with Swift, SwiftUI, AppKit, ScreenCaptureKit, Vision, and Core Graphics—without web views, accounts, analytics, uploads, or third-party runtime dependencies.
 
-Out of scope for this milestone: screen recording, audio recording, translation, and OCR.
+## Highlights
+
+- Region, window, full-screen, previous-area, preset-size, and delayed capture
+- Retina-native capture with lossless PNG export by default
+- Compact inline annotation: rectangle, ellipse, line, tapered arrow, pen, spotlight, and text
+- Global color and line-width controls, selection editing, undo, and redo
+- Adjustable capture region with clear outside dimming and four resize handles
+- Scrolling capture with a live viewport, borderless stitched preview, sticky-header handling, and fast-scroll recovery
+- Bounded long-image memory use, deterministic stitching, and cancellation with `Escape`
+- Menu-bar controls, editable global shortcuts, and silent launch
+- Local-only processing and a declared privacy manifest
+
+Screen recording, audio recording, translation, OCR, accounts, telemetry, and cloud upload are intentionally out of scope.
+
+<p align="center">
+  <img src="docs/images/settings.png" width="880" alt="Native Screen Capture settings with editable shortcuts">
+</p>
+
+<p align="center"><em>Native settings and editable shortcuts. The current application interface is Simplified Chinese.</em></p>
+
+## Project status
+
+`0.4.7` is the first public-release candidate. The source builds and its automated suite pass on macOS, but downloadable releases are not considered official until they are Developer ID signed, notarized, stapled, and verified with Gatekeeper.
 
 ## Requirements
 
-- macOS 14 or newer
-- Xcode 26 or newer
-- Screen Recording permission for the built app
+- macOS 14 or later
+- Xcode 26 or later for development
+- Screen Recording permission when the first capture starts
 
-## Build
+## Build and run
+
+Open `ScreenCapture.xcodeproj`, select your own development team if Xcode requests one, then press `Command-R`.
+
+For a signing-independent command-line build:
 
 ```sh
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
@@ -37,41 +64,49 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
   CODE_SIGNING_ALLOWED=NO build
 ```
 
-Open `ScreenCapture.xcodeproj` in Xcode, choose your development team if needed, and press `Command-R`. The app starts without opening or repeatedly restoring a dashboard window, while keeping its branded Dock icon and menu-bar status item. Screenshot actions and Settings remain available from the menu-bar icon; the first screenshot request prompts for Screen Recording permission.
+The app launches quietly and remains available from both the Dock and menu bar. macOS asks for Screen Recording permission only when capture is first requested. If the permission was just changed, return to the app and try again.
+
+## Default shortcuts
+
+| Action | Shortcut |
+| --- | --- |
+| Region capture | `Command-4` |
+| Scrolling capture | `Command-5` |
+| Cancel any active capture | `Escape` |
+
+All capture shortcuts can be changed in **Settings → Capture**.
 
 ## Test
 
 ```sh
-DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
-  -project ScreenCapture.xcodeproj \
-  -scheme ScreenCapture \
-  -destination 'platform=macOS' \
-  CODE_SIGNING_ALLOWED=NO test
+./scripts/ci.sh
 ```
 
-The repository enables complete Swift concurrency checking. Release builds use automatic signing; a publicly downloadable app or DMG must additionally be signed with a Developer ID Application certificate and notarized by Apple.
+The validation script checks property lists, runs the complete unit-test suite, performs Xcode static analysis, and produces an unsigned universal Release build. See [release checks](docs/RELEASE_CHECKLIST.md) and [distribution](docs/DISTRIBUTION.md) for the remaining manual, signing, and notarization gates.
 
-The full automated, compatibility, signing, notarization, and rollback gates are in [`docs/RELEASE_CHECKLIST.md`](docs/RELEASE_CHECKLIST.md).
+## Known limitations
 
-## Default shortcuts
-
-- `Command-4`: ordinary region capture
-- `Command-5`: scrolling long capture selection
-- `Escape`: cancel the active workflow at any point, including while a long screenshot is collecting or rendering
-
-Every screenshot mode can be assigned by clicking its recorder field in **Settings → Capture** and pressing the desired key combination. `Command-4` and `Command-5` remain the defaults for ordinary and scrolling capture.
+- Scrolling capture needs repeated visual overlap. Video, rapidly animated pages, large horizontal movement, or content that redraws every frame may prevent a reliable stitch.
+- Screen Recording permission is a macOS requirement even though the app never records video.
+- UI and permission flows still require manual testing because macOS does not expose every system interaction to unit tests.
+- The current application interface is Simplified Chinese; repository documentation is bilingual.
 
 ## Repository layout
 
-- `ScreenCapture/App`: app lifecycle and menu bar
-- `ScreenCapture/Capture`: screen capture and selection overlay
-- `ScreenCapture/Annotation`: inline editor and tools
-- `ScreenCapture/LongCapture`: frame collection and stitching
-- `ScreenCapture/Services`: export, hotkeys, and system integrations
+- `ScreenCapture/App`: lifecycle and menu-bar integration
+- `ScreenCapture/Capture`: capture coordination and adjustable selection
+- `ScreenCapture/Annotation`: non-destructive annotation editor
+- `ScreenCapture/LongCapture`: stream collection, alignment, and stitching
+- `ScreenCapture/Services`: export, permissions, hot keys, and system integration
 - `ScreenCapture/Settings`: persisted preferences
-- `ScreenCaptureTests`: deterministic core tests
-- `docs`: product and architecture decisions
+- `ScreenCaptureTests`: deterministic unit and regression tests
+- `scripts`: CI and direct-distribution helpers
+- `docs`: architecture, privacy, product scope, and release process
 
-## Maintainer
+## Contributing and security
 
-Native team utility maintained in this repository.
+Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request. Please report security or privacy issues privately as described in [SECURITY.md](SECURITY.md), not in a public issue.
+
+## License
+
+Licensed under the [Apache License 2.0](LICENSE).
