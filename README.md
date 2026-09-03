@@ -42,7 +42,7 @@ Screen recording, audio recording, translation, OCR, accounts, telemetry, and cl
 
 ## Project status
 
-`0.4.9` is the current public-release candidate for this independently maintained personal open-source project. The source builds and its automated suite pass on macOS, but downloadable releases are not considered official until they are Developer ID signed, notarized, stapled, and verified with Gatekeeper.
+`0.4.10` is the current public-release candidate for this independently maintained personal open-source project. The source builds and its automated suite pass on macOS, but downloadable releases are not considered official until they are Developer ID signed, notarized, stapled, and verified with Gatekeeper.
 
 ## Requirements
 

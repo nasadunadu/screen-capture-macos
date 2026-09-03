@@ -25,7 +25,7 @@ final class SelectionOverlayController: NSObject {
     private let snapshot: DisplaySnapshot
     private let mode: CaptureMode
     private var panel: EditorPanel?
-    private var toolbarPanel: EditorPanel?
+    private weak var toolbarHostingView: NSView?
     private weak var selectionView: SelectionOverlayView?
     private let annotationDocument = AnnotationDocument()
     var onResult: ((SelectionResult) -> Void)?
@@ -138,15 +138,16 @@ final class SelectionOverlayController: NSObject {
             height: localRect.height
         )
 
-        if let toolbarPanel {
-            let desiredSize = toolbarPanel.frame.size
-            toolbarPanel.setFrame(
-                AnnotationEditorLayout.toolbarFrame(
-                    visibleFrame: screen.visibleFrame,
-                    selectionFrame: globalRect,
-                    desiredSize: desiredSize
-                ),
-                display: true
+        if let toolbarHostingView {
+            let desiredSize = toolbarHostingView.fittingSize
+            let toolbarFrame = AnnotationEditorLayout.toolbarFrame(
+                visibleFrame: screen.visibleFrame,
+                selectionFrame: globalRect,
+                desiredSize: CGSize(width: ceil(desiredSize.width), height: 62)
+            )
+            selectionView?.installToolbar(
+                toolbarHostingView,
+                frame: toolbarFrame.offsetBy(dx: -screen.frame.minX, dy: -screen.frame.minY)
             )
             keepToolbarVisible()
             return
@@ -182,48 +183,31 @@ final class SelectionOverlayController: NSObject {
             selectionFrame: globalRect,
             desiredSize: desiredSize
         )
-        let toolbarPanel = EditorPanel(
-            contentRect: toolbarFrame,
-            styleMask: [.borderless, .nonactivatingPanel],
-            backing: .buffered,
-            defer: false
+        self.toolbarHostingView = hostingView
+        selectionView?.installToolbar(
+            hostingView,
+            frame: toolbarFrame.offsetBy(dx: -screen.frame.minX, dy: -screen.frame.minY)
         )
-        toolbarPanel.level = .screenSaver
-        toolbarPanel.backgroundColor = .clear
-        toolbarPanel.isOpaque = false
-        toolbarPanel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-        toolbarPanel.contentView = hostingView
-        toolbarPanel.orderFront(nil)
-        self.toolbarPanel = toolbarPanel
-        if let panel {
-            toolbarPanel.keepAbove(panel)
-        }
-        panel?.makeKey()
         keepToolbarVisible()
     }
 
     private func keepToolbarVisible() {
-        guard let toolbarPanel else { return }
-        if let panel {
-            toolbarPanel.keepAbove(panel)
-        } else {
-            toolbarPanel.orderFrontRegardless()
-        }
+        selectionView?.keepToolbarVisible()
     }
 
     private func finish(with result: SelectionResult) {
-        toolbarPanel?.orderOut(nil)
+        toolbarHostingView?.removeFromSuperview()
+        toolbarHostingView = nil
         panel?.orderOut(nil)
-        toolbarPanel = nil
         panel = nil
         selectionView = nil
         onResult?(result)
     }
 
     func cancel() {
-        toolbarPanel?.orderOut(nil)
+        toolbarHostingView?.removeFromSuperview()
+        toolbarHostingView = nil
         panel?.orderOut(nil)
-        toolbarPanel = nil
         panel = nil
         selectionView = nil
         onCancel?()
@@ -248,6 +232,7 @@ private final class SelectionOverlayView: NSView {
     private var dragOperation: DragOperation?
     private var hoveredWindow: WindowCandidate?
     private weak var annotationCanvas: AnnotationCanvasView?
+    private weak var toolbarHostingView: NSView?
     var onResult: ((SelectionResult) -> Void)?
     var onSelectionReady: ((CGRect) -> Void)?
     var onInteraction: (() -> Void)?
@@ -437,6 +422,21 @@ private final class SelectionOverlayView: NSView {
             return
         }
         super.keyDown(with: event)
+    }
+
+    func installToolbar(_ toolbar: NSView, frame: CGRect) {
+        toolbar.removeFromSuperview()
+        toolbar.frame = frame.integral
+        toolbar.autoresizingMask = []
+        addSubview(toolbar, positioned: .above, relativeTo: nil)
+        toolbarHostingView = toolbar
+        toolbar.isHidden = false
+    }
+
+    func keepToolbarVisible() {
+        guard let toolbarHostingView else { return }
+        toolbarHostingView.isHidden = false
+        addSubview(toolbarHostingView, positioned: .above, relativeTo: nil)
     }
 
     func complete(action: RegionSelectionAction, style: AnnotationStyle) {
