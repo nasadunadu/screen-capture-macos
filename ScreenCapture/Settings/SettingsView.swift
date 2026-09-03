@@ -260,8 +260,28 @@ struct SettingsView: View {
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }
+
+            Section("关于") {
+                HStack {
+                    Text("版本")
+                    Spacer()
+                    Text(appVersion)
+                        .foregroundStyle(.secondary)
+                        .textSelection(.enabled)
+                }
+            }
         }
         .formStyle(.grouped)
+    }
+
+    private var appVersion: String {
+        let bundle = Bundle.main
+        let version = bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "未知"
+        let build = bundle.object(forInfoDictionaryKey: "CFBundleVersion") as? String
+        if let build, !build.isEmpty {
+            return "\(version) (Build \(build))"
+        }
+        return version
     }
 
     private func refreshPermission() {

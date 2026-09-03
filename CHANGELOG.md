@@ -6,6 +6,14 @@ All notable changes to this project will be documented in this file.
 
 No user-visible changes yet.
 
+## [0.4.9] - 2026-09-03
+
+### Fixed
+
+- Kept the selection-stage annotation toolbar above the canvas after the first arrow, rectangle, line, or other drawing gesture.
+- Added the current app version and build number to the Settings window.
+- Added regression coverage for the selection-stage toolbar interaction callback.
+
 ## [0.4.8] - 2026-09-03
 
 ### Fixed
