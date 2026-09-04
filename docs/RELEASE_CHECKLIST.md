@@ -14,6 +14,9 @@ Screen Capture is an independently maintained personal open-source project distr
 - `codesign --verify --deep --strict --verbose=2` succeeds.
 - The release entitlements do not contain `com.apple.security.get-task-allow`.
 - `spctl --assess --type execute --verbose=4` accepts the stapled app.
+- The final DMG is notarized, stapled, and accepted by Gatekeeper.
+- The DMG opens with `ScreenCapture.app` and an `Applications` shortcut at its root.
+- The DMG and fallback ZIP each match their published SHA-256 checksum.
 
 ## Manual compatibility matrix
 
@@ -35,13 +38,13 @@ For long capture, confirm native pixel width, no duplicated or missing seams, no
 
 ## Direct-distribution signing and notarization
 
-1. Install a valid **Developer ID Application** certificate controlled by the project maintainer.
+1. Install a valid local **Developer ID Application** certificate and private key controlled by the project maintainer. A cloud-managed export alone cannot locally sign the custom DMG.
 2. In Xcode, archive with the generic macOS destination and export using **Developer ID** distribution.
 3. Keep Hardened Runtime enabled and use a secure timestamp.
 4. Submit the exported archive with Xcode or `notarytool` and wait for an accepted result.
 5. Staple the ticket with `xcrun stapler staple ScreenCapture.app`.
 6. Re-run strict code-signature and Gatekeeper assessment on the stapled artifact.
-7. Package the stapled app, calculate a SHA-256 checksum, and test the downloaded package on a clean Mac.
+7. Package the stapled app as a drag-and-drop DMG and fallback ZIP, notarize and staple the DMG, calculate both SHA-256 checksums, and test the downloaded DMG on a clean Mac.
 
 An Apple Development-signed build, an ad-hoc build, or an artifact rejected by Gatekeeper is not a release artifact.
 

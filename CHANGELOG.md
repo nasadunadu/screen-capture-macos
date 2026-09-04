@@ -8,6 +8,10 @@ No user-visible changes yet.
 
 ## [0.4.11] - 2026-09-04
 
+### Changed
+
+- Made the direct-distribution pipeline reproducible: notarized releases now produce a drag-and-drop DMG, fallback ZIP, and separate SHA-256 checksums, with packaging smoke-tested by CI.
+
 ### Fixed
 
 - Rebuilt annotation presentation around one retained root view and window. The selection overlay and post-capture editor now keep the canvas and toolbar in one stable z-order tree, so drawing an arrow, shape, or line cannot hide the toolbar.

@@ -18,6 +18,11 @@ echo "==> Static files"
 plutil -lint \
   ScreenCapture/Resources/Info.plist \
   ScreenCapture/Resources/PrivacyInfo.xcprivacy
+zsh -n \
+  scripts/ci.sh \
+  scripts/release/preflight.sh \
+  scripts/release/package.sh \
+  scripts/release/notarize.sh
 git diff --check
 
 echo "==> Unit and regression tests"
@@ -81,5 +86,16 @@ RELEASE_DISPLAY_NAME=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleDisplayName' "
 }
 test -f "$APP/Contents/Resources/PrivacyInfo.xcprivacy"
 plutil -lint "$APP/Contents/Resources/PrivacyInfo.xcprivacy"
+
+echo "==> Release packaging smoke test"
+PACKAGE_SMOKE_DIR=$(mktemp -d /tmp/screencapture-package-smoke.XXXXXX)
+trap 'rm -rf "$PACKAGE_SMOKE_DIR"' EXIT
+"$PROJECT_ROOT/scripts/release/package.sh" "$APP" "$PACKAGE_SMOKE_DIR"
+VERSION=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Contents/Info.plist")
+(
+  cd "$PACKAGE_SMOKE_DIR"
+  shasum -a 256 -c "ScreenCapture-$VERSION-macos-universal.dmg.sha256"
+  shasum -a 256 -c "ScreenCapture-$VERSION-macos-universal.zip.sha256"
+)
 
 echo "Validated ScreenCapture.app ($ARCHITECTURES)"

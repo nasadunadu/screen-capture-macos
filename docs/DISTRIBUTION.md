@@ -7,7 +7,7 @@ This personal open-source project distributes the macOS app outside the Mac App 
 - a clean commit on the release branch;
 - an explicit semantic version and matching changelog entry;
 - the complete automated and manual release checklist;
-- a valid **Developer ID Application** identity;
+- a valid local **Developer ID Application** identity and private key for signing the custom DMG;
 - an Xcode notary keychain profile created without storing credentials in this repository.
 
 ## 1. Validate source
@@ -26,6 +26,8 @@ The preflight runs the full test suite, static analysis, property-list validatio
 4. In Organizer, select **Distribute App → Developer ID**.
 5. Export a Developer ID signed app with Hardened Runtime and a secure timestamp.
 
+Xcode cloud signing can export the app with a **Cloud Managed Developer ID Application** certificate, but its private key is not installed in the local keychain. This release workflow also signs the custom DMG, so create or import a traditional **Developer ID Application** identity for the same team in **Xcode → Settings → Accounts → Manage Certificates** before running the notarization script.
+
 Before the first public binary, replace the development bundle identifier with a stable reverse-DNS identifier controlled by the release owner. Do not commit certificates, private keys, provisioning profiles, or notarization credentials.
 
 Debug builds use `com.nasa.ScreenCapture.debug` and appear as **ScreenCapture Dev**. Public Release builds use `com.nasa.ScreenCapture`. Keep these identities separate: macOS screen-recording consent is tied to the bundle identifier and code-signing requirement, not the visible version number. Never install an Apple Development-signed build using the public bundle identifier, because it can invalidate the consent record for the Developer ID-signed app.
@@ -41,20 +43,20 @@ Store notarization credentials in the login keychain using `notarytool store-cre
   /path/to/output
 ```
 
-The script verifies the Developer ID signature, rejects debug entitlements, confirms both CPU architectures, submits the app to Apple, staples and validates the ticket, runs Gatekeeper assessment, creates the final ZIP, and writes its SHA-256 checksum.
+The script verifies the Developer ID signature, rejects debug entitlements, confirms both CPU architectures, submits and staples the app, creates the final DMG and fallback ZIP, signs the DMG with the app's Developer ID identity, notarizes and staples the DMG, runs Gatekeeper assessment, and writes a SHA-256 checksum beside each download. The DMG presents `ScreenCapture.app` and an `Applications` shortcut at its root so installation is a direct drag-and-drop.
 
 ## 4. Test the distributed artifact
 
-Test the exact downloaded ZIP—not the Xcode build folder—on a clean Mac or clean user account:
+Test the exact downloaded DMG—not the Xcode build folder—on a clean Mac or clean user account:
 
 1. Download it through a browser so quarantine metadata is present.
-2. Verify the published SHA-256 checksum.
-3. Move the app into `/Applications`.
+2. Verify the published DMG SHA-256 checksum.
+3. Open the DMG and drag the app into `Applications`.
 4. Confirm the first-launch Gatekeeper identity message.
 5. Exercise permission denial, permission grant, capture, annotation, long capture, export, relaunch, and uninstall.
 
 ## 5. Publish a GitHub Release
 
-Create an annotated `vMAJOR.MINOR.PATCH` tag from the verified commit. Attach only the final notarized ZIP and checksum. Release notes must state supported macOS versions, tested hardware, permission requirements, known limitations, and the previous rollback version.
+Create an annotated `vMAJOR.MINOR.PATCH` tag from the verified commit. Attach the final notarized DMG, fallback ZIP, and both checksum files. Release notes must state supported macOS versions, tested hardware, permission requirements, known limitations, and the previous rollback version.
 
 Do not upload Xcode archives, dSYMs, development-signed builds, logs, or notarization credentials as public release assets.

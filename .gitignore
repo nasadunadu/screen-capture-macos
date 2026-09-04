@@ -4,7 +4,7 @@
 DerivedData/
 build/
 artifacts/
-release/
+/release/
 *.dSYM/
 *.xcarchive/
 *.xcresult/
