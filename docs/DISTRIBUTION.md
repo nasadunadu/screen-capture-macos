@@ -28,6 +28,8 @@ The preflight runs the full test suite, static analysis, property-list validatio
 
 Before the first public binary, replace the development bundle identifier with a stable reverse-DNS identifier controlled by the release owner. Do not commit certificates, private keys, provisioning profiles, or notarization credentials.
 
+Debug builds use `com.nasa.ScreenCapture.debug` and appear as **ScreenCapture Dev**. Public Release builds use `com.nasa.ScreenCapture`. Keep these identities separate: macOS screen-recording consent is tied to the bundle identifier and code-signing requirement, not the visible version number. Never install an Apple Development-signed build using the public bundle identifier, because it can invalidate the consent record for the Developer ID-signed app.
+
 ## 3. Notarize and package
 
 Store notarization credentials in the login keychain using `notarytool store-credentials`, then run:

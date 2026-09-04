@@ -14,6 +14,8 @@ No user-visible changes yet.
 - Removed the previous two-panel toolbar lifecycle and stopped reordering toolbar subviews during mouse events.
 - Removed AppKit cursor-rect mutations from the selection overlay. On macOS 26, `resetCursorRects()` could raise an Objective-C exception during a resize or first annotation stroke and terminate the app with `SIGABRT`.
 - Removed cursor-rect invalidation calls from the drag lifecycle so selection updates no longer race the AppKit display-cycle tracker.
+- Isolated Debug and Release bundle identities so local development builds cannot replace the screen-recording permission record of the Developer ID-signed app.
+- Limited the native screen-recording consent request to once per process launch; later denied attempts use the recoverable settings flow without repeatedly invoking the system request API.
 
 ## [0.4.10] - 2026-09-03
 

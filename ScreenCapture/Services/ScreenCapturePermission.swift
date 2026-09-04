@@ -5,6 +5,7 @@ import Foundation
 enum ScreenCapturePermission {
     @MainActor private static var runtimeAccessConfirmed = false
     @MainActor private static var awaitingSystemSettingsReturn = false
+    @MainActor private static var requestGate = ScreenCapturePermissionRequestGate()
 
     static let systemSettingsURLs = [
         URL(string: "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_ScreenCapture"),
@@ -18,7 +19,9 @@ enum ScreenCapturePermission {
     @MainActor
     @discardableResult
     static func request() -> Bool {
-        isGranted || CGRequestScreenCaptureAccess()
+        let granted = isGranted
+        guard requestGate.shouldRequest(isGranted: granted) else { return granted }
+        return CGRequestScreenCaptureAccess()
     }
 
     @MainActor
@@ -54,5 +57,15 @@ enum ScreenCapturePermission {
             guard error == nil else { return }
             DispatchQueue.main.async { NSApp.terminate(nil) }
         }
+    }
+}
+
+struct ScreenCapturePermissionRequestGate {
+    private(set) var didRequest = false
+
+    mutating func shouldRequest(isGranted: Bool) -> Bool {
+        guard !isGranted, !didRequest else { return false }
+        didRequest = true
+        return true
     }
 }
