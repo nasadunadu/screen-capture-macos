@@ -25,7 +25,6 @@ final class SelectionOverlayController: NSObject {
     private let snapshot: DisplaySnapshot
     private let mode: CaptureMode
     private var panel: EditorPanel?
-    private weak var toolbarHostingView: NSView?
     private weak var selectionView: SelectionOverlayView?
     private let annotationDocument = AnnotationDocument()
     var onResult: ((SelectionResult) -> Void)?
@@ -61,12 +60,6 @@ final class SelectionOverlayController: NSObject {
         view.onResult = { [weak self] result in
             self?.finish(with: result)
         }
-        view.onSelectionReady = { [weak self] rect in
-            self?.presentToolbar(for: rect)
-        }
-        view.onInteraction = { [weak self] in
-            self?.keepToolbarVisible()
-        }
         view.onConfirm = { [weak self] in
             guard let self else { return }
             let action: RegionSelectionAction = mode == .longCapture ? .longCapture : .defaultExport
@@ -75,6 +68,30 @@ final class SelectionOverlayController: NSObject {
         view.onCancel = { [weak self] in
             self?.cancel()
         }
+
+        let toolbarView = AnnotationToolbarView(
+            document: annotationDocument,
+            supportsLongCapture: true,
+            onLongCapture: { [weak self] in
+                self?.selectionView?.complete(
+                    action: .longCapture,
+                    style: self?.annotationDocument.style ?? AnnotationStyle()
+                )
+            },
+            onSave: { [weak self] in
+                guard let self else { return }
+                let action: RegionSelectionAction = mode == .longCapture ? .longCapture : .defaultExport
+                self.selectionView?.complete(action: action, style: self.annotationDocument.style)
+            },
+            onSaveAs: { [weak self] in
+                self?.selectionView?.complete(
+                    action: .saveAs,
+                    style: self?.annotationDocument.style ?? AnnotationStyle()
+                )
+            },
+            onCancel: { [weak self] in self?.cancel() }
+        )
+        view.installToolbar(NSHostingView(rootView: toolbarView))
         panel.contentView = view
         self.panel = panel
         selectionView = view
@@ -128,76 +145,7 @@ final class SelectionOverlayController: NSObject {
         )))
     }
 
-    private func presentToolbar(for localRect: CGRect) {
-        guard mode != .window else { return }
-        let screen = snapshot.screen
-        let globalRect = CGRect(
-            x: screen.frame.minX + localRect.minX,
-            y: screen.frame.minY + localRect.minY,
-            width: localRect.width,
-            height: localRect.height
-        )
-
-        if let toolbarHostingView {
-            let desiredSize = toolbarHostingView.fittingSize
-            let toolbarFrame = AnnotationEditorLayout.toolbarFrame(
-                visibleFrame: screen.visibleFrame,
-                selectionFrame: globalRect,
-                desiredSize: CGSize(width: ceil(desiredSize.width), height: 62)
-            )
-            selectionView?.installToolbar(
-                toolbarHostingView,
-                frame: toolbarFrame.offsetBy(dx: -screen.frame.minX, dy: -screen.frame.minY)
-            )
-            keepToolbarVisible()
-            return
-        }
-
-        let toolbarView = AnnotationToolbarView(
-            document: annotationDocument,
-            supportsLongCapture: true,
-            onLongCapture: { [weak self] in
-                self?.selectionView?.complete(
-                    action: .longCapture,
-                    style: self?.annotationDocument.style ?? AnnotationStyle()
-                )
-            },
-            onSave: { [weak self] in
-                guard let self else { return }
-                let action: RegionSelectionAction = mode == .longCapture ? .longCapture : .defaultExport
-                selectionView?.complete(action: action, style: annotationDocument.style)
-            },
-            onSaveAs: { [weak self] in
-                self?.selectionView?.complete(
-                    action: .saveAs,
-                    style: self?.annotationDocument.style ?? AnnotationStyle()
-                )
-            },
-            onCancel: { [weak self] in self?.cancel() }
-        )
-        let hostingView = NSHostingView(rootView: toolbarView)
-        let fittingSize = hostingView.fittingSize
-        let desiredSize = CGSize(width: ceil(fittingSize.width), height: 62)
-        let toolbarFrame = AnnotationEditorLayout.toolbarFrame(
-            visibleFrame: screen.visibleFrame,
-            selectionFrame: globalRect,
-            desiredSize: desiredSize
-        )
-        self.toolbarHostingView = hostingView
-        selectionView?.installToolbar(
-            hostingView,
-            frame: toolbarFrame.offsetBy(dx: -screen.frame.minX, dy: -screen.frame.minY)
-        )
-        keepToolbarVisible()
-    }
-
-    private func keepToolbarVisible() {
-        selectionView?.keepToolbarVisible()
-    }
-
     private func finish(with result: SelectionResult) {
-        toolbarHostingView?.removeFromSuperview()
-        toolbarHostingView = nil
         panel?.orderOut(nil)
         panel = nil
         selectionView = nil
@@ -205,8 +153,6 @@ final class SelectionOverlayController: NSObject {
     }
 
     func cancel() {
-        toolbarHostingView?.removeFromSuperview()
-        toolbarHostingView = nil
         panel?.orderOut(nil)
         panel = nil
         selectionView = nil
@@ -232,10 +178,11 @@ private final class SelectionOverlayView: NSView {
     private var dragOperation: DragOperation?
     private var hoveredWindow: WindowCandidate?
     private weak var annotationCanvas: AnnotationCanvasView?
-    private weak var toolbarHostingView: NSView?
+    // The toolbar is owned by the overlay root for the entire selection/edit
+    // lifecycle. Keeping one strong view in one window removes the former
+    // second-window focus and z-order race after the first annotation stroke.
+    private var toolbarHostingView: NSView?
     var onResult: ((SelectionResult) -> Void)?
-    var onSelectionReady: ((CGRect) -> Void)?
-    var onInteraction: (() -> Void)?
     var onConfirm: (() -> Void)?
     var onCancel: (() -> Void)?
 
@@ -273,30 +220,12 @@ private final class SelectionOverlayView: NSView {
     }
 
     override func resetCursorRects() {
-        if let rect = SelectionGeometry.cursorRect(bounds, inside: bounds) {
-            addCursorRect(rect, cursor: .crosshair)
-        }
-        guard mode != .window, selection.width >= 6, selection.height >= 6 else { return }
-        if annotationCanvas == nil,
-           let interior = SelectionGeometry.cursorRect(selection.insetBy(dx: 8, dy: 8), inside: bounds) {
-            addCursorRect(interior, cursor: .openHand)
-        }
-        for handle in SelectionHandle.allCases {
-            let point = handle.point(in: selection)
-            let cursor: NSCursor
-            switch handle {
-            case .left, .right:
-                cursor = .resizeLeftRight
-            case .top, .bottom:
-                cursor = .resizeUpDown
-            default:
-                cursor = .crosshair
-            }
-            let hitRect = CGRect(x: point.x - 10, y: point.y - 10, width: 20, height: 20)
-            if let clipped = SelectionGeometry.cursorRect(hitRect, inside: bounds) {
-                addCursorRect(clipped, cursor: cursor)
-            }
-        }
+        // AppKit invokes this callback during display-cycle tracking-area
+        // updates.  Mutating cursor rects while the selection view is being
+        // resized or while the annotation canvas is installed can raise an
+        // Objective-C exception inside NSView and terminate the app.  The
+        // selection itself still uses explicit hit-testing, so cursor rects
+        // are cosmetic and are intentionally left to AppKit's stable default.
     }
 
     override func draw(_ dirtyRect: NSRect) {
@@ -394,7 +323,6 @@ private final class SelectionOverlayView: NSView {
                 inside: bounds
             )
         }
-        window?.invalidateCursorRects(for: self)
         needsDisplay = true
     }
 
@@ -404,11 +332,10 @@ private final class SelectionOverlayView: NSView {
         if selection.width < 6 || selection.height < 6 { selection = .zero }
         dragOrigin = nil
         dragOperation = nil
-        window?.invalidateCursorRects(for: self)
         needsDisplay = true
         if selection.width >= 6, selection.height >= 6 {
             installAnnotationCanvas()
-            onSelectionReady?(selection)
+            layoutToolbar(for: selection)
         }
     }
 
@@ -424,19 +351,39 @@ private final class SelectionOverlayView: NSView {
         super.keyDown(with: event)
     }
 
-    func installToolbar(_ toolbar: NSView, frame: CGRect) {
+    func installToolbar(_ toolbar: NSView) {
         toolbar.removeFromSuperview()
-        toolbar.frame = frame.integral
+        toolbar.frame = .zero
         toolbar.autoresizingMask = []
         addSubview(toolbar, positioned: .above, relativeTo: nil)
         toolbarHostingView = toolbar
-        toolbar.isHidden = false
+        toolbar.isHidden = true
     }
 
     func keepToolbarVisible() {
         guard let toolbarHostingView else { return }
         toolbarHostingView.isHidden = false
-        addSubview(toolbarHostingView, positioned: .above, relativeTo: nil)
+    }
+
+    private func layoutToolbar(for localRect: CGRect) {
+        guard mode != .window, let toolbarHostingView else { return }
+        let screen = snapshot.screen
+        let globalRect = CGRect(
+            x: screen.frame.minX + localRect.minX,
+            y: screen.frame.minY + localRect.minY,
+            width: localRect.width,
+            height: localRect.height
+        )
+        let fittingSize = toolbarHostingView.fittingSize
+        let frame = AnnotationEditorLayout.toolbarFrame(
+            visibleFrame: screen.visibleFrame,
+            selectionFrame: globalRect,
+            desiredSize: CGSize(width: ceil(fittingSize.width), height: 62)
+        )
+        toolbarHostingView.frame = frame
+            .offsetBy(dx: -screen.frame.minX, dy: -screen.frame.minY)
+            .integral
+        keepToolbarVisible()
     }
 
     func complete(action: RegionSelectionAction, style: AnnotationStyle) {
@@ -483,8 +430,12 @@ private final class SelectionOverlayView: NSView {
         let canvas = AnnotationCanvasView(image: image, frame: canvasFrame, document: document)
         canvas.onConfirm = { [weak self] in self?.onConfirm?() }
         canvas.onCancel = { [weak self] in self?.onCancel?() }
-        canvas.onInteraction = { [weak self] in self?.onInteraction?() }
-        addSubview(canvas)
+        canvas.onInteraction = { [weak self] in self?.keepToolbarVisible() }
+        if let toolbarHostingView {
+            addSubview(canvas, positioned: .below, relativeTo: toolbarHostingView)
+        } else {
+            addSubview(canvas)
+        }
         annotationCanvas = canvas
         window?.makeFirstResponder(canvas)
     }

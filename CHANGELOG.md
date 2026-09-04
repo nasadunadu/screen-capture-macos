@@ -6,6 +6,15 @@ All notable changes to this project will be documented in this file.
 
 No user-visible changes yet.
 
+## [0.4.11] - 2026-09-04
+
+### Fixed
+
+- Rebuilt annotation presentation around one retained root view and window. The selection overlay and post-capture editor now keep the canvas and toolbar in one stable z-order tree, so drawing an arrow, shape, or line cannot hide the toolbar.
+- Removed the previous two-panel toolbar lifecycle and stopped reordering toolbar subviews during mouse events.
+- Removed AppKit cursor-rect mutations from the selection overlay. On macOS 26, `resetCursorRects()` could raise an Objective-C exception during a resize or first annotation stroke and terminate the app with `SIGABRT`.
+- Removed cursor-rect invalidation calls from the drag lifecycle so selection updates no longer race the AppKit display-cycle tracker.
+
 ## [0.4.10] - 2026-09-03
 
 ### Fixed

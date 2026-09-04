@@ -37,28 +37,21 @@ final class AnnotationToolbarTests: XCTestCase {
     }
 
     @MainActor
-    func testEditorToolbarPanelStaysAboveCanvasAndDoesNotHideOnDeactivate() {
-        let canvas = EditorPanel(
-            contentRect: CGRect(x: 0, y: 0, width: 320, height: 240),
-            styleMask: [.borderless, .nonactivatingPanel],
-            backing: .buffered,
-            defer: true
-        )
-        let toolbar = EditorPanel(
-            contentRect: CGRect(x: 0, y: 0, width: 320, height: 62),
-            styleMask: [.borderless, .nonactivatingPanel],
-            backing: .buffered,
-            defer: true
-        )
+    func testEditorToolbarStaysInSingleRetainedViewHierarchy() {
+        let root = AnnotationEditorRootView(frame: CGRect(x: 0, y: 0, width: 500, height: 400))
+        let canvas = NSView(frame: CGRect(x: 0, y: 80, width: 500, height: 320))
+        let toolbar = NSView(frame: .zero)
 
-        toolbar.keepAbove(canvas)
+        root.addCanvas(canvas)
+        root.installToolbar(toolbar, frame: CGRect(x: 100, y: 10, width: 300, height: 62))
 
-        XCTAssertFalse(toolbar.hidesOnDeactivate)
-        XCTAssertTrue(canvas.childWindows?.contains { $0 === toolbar } == true)
+        XCTAssertTrue(canvas.superview === root)
+        XCTAssertTrue(toolbar.superview === root)
+        XCTAssertTrue(root.subviews.last === toolbar)
 
-        toolbar.orderOut(nil)
-        canvas.orderOut(nil)
-        toolbar.close()
-        canvas.close()
+        toolbar.isHidden = true
+        root.keepToolbarVisible()
+        XCTAssertFalse(toolbar.isHidden)
+        XCTAssertTrue(toolbar.superview === root)
     }
 }

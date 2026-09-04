@@ -26,12 +26,6 @@ final class EditorPanel: NSPanel {
         hidesOnDeactivate = false
     }
 
-    func keepAbove(_ parent: NSWindow) {
-        if parent.childWindows?.contains(where: { $0 === self }) != true {
-            parent.addChildWindow(self, ordered: .above)
-        }
-        orderFrontRegardless()
-    }
 }
 
 private final class AnnotationDimmingView: NSView {
@@ -44,6 +38,35 @@ private final class AnnotationDimmingView: NSView {
     }
 }
 
+/// Single-window host for the annotation canvas and toolbar.
+///
+/// The previous editor used a second NSPanel for the toolbar. Making the
+/// toolbar a strong subview of this root view gives AppKit one responder and
+/// one z-order tree for all annotation interactions.
+@MainActor
+final class AnnotationEditorRootView: NSView {
+    private var toolbar: NSView?
+
+    func addCanvas(_ canvas: NSView) {
+        canvas.removeFromSuperview()
+        addSubview(canvas, positioned: .below, relativeTo: toolbar)
+    }
+
+    func installToolbar(_ toolbar: NSView, frame: CGRect) {
+        toolbar.removeFromSuperview()
+        toolbar.frame = frame.integral
+        toolbar.autoresizingMask = []
+        addSubview(toolbar, positioned: .above, relativeTo: nil)
+        self.toolbar = toolbar
+        toolbar.isHidden = false
+    }
+
+    func keepToolbarVisible() {
+        guard let toolbar else { return }
+        toolbar.isHidden = false
+    }
+}
+
 @MainActor
 final class AnnotationEditorController: NSObject {
     private let image: CGImage
@@ -51,7 +74,6 @@ final class AnnotationEditorController: NSObject {
     private let context: CaptureContext?
     private var dimmingPanels: [NSPanel] = []
     private var canvasPanel: EditorPanel?
-    private var toolbarPanel: EditorPanel?
     private var canvas: AnnotationCanvasView?
     private var exportTask: Task<Void, Never>?
     var onClose: (() -> Void)?
@@ -79,10 +101,8 @@ final class AnnotationEditorController: NSObject {
         exportTask = nil
         dimmingPanels.forEach { $0.orderOut(nil) }
         canvasPanel?.orderOut(nil)
-        toolbarPanel?.orderOut(nil)
         dimmingPanels.removeAll()
         canvasPanel = nil
-        toolbarPanel = nil
         onClose?()
     }
 
@@ -99,32 +119,6 @@ final class AnnotationEditorController: NSObject {
             presentDimmingPanels(screenFrame: screen.frame, selectionFrame: frame)
         }
 
-        let panel = EditorPanel(
-            contentRect: frame,
-            styleMask: [.borderless, .nonactivatingPanel],
-            backing: .buffered,
-            defer: false
-        )
-        panel.level = .screenSaver
-        panel.backgroundColor = .clear
-        panel.isOpaque = false
-        panel.hasShadow = true
-        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-        let canvas = AnnotationCanvasView(
-            image: image,
-            frame: CGRect(origin: .zero, size: frame.size),
-            document: document
-        )
-        canvas.onConfirm = { [weak self] in self?.finish() }
-        canvas.onCancel = { [weak self] in self?.close() }
-        canvas.onInteraction = { [weak self] in
-            self?.toolbarPanel?.orderFrontRegardless()
-        }
-        panel.contentView = canvas
-        panel.makeKeyAndOrderFront(nil)
-        self.canvasPanel = panel
-        self.canvas = canvas
-
         let toolbarView = AnnotationToolbarView(
             document: document,
             supportsLongCapture: context != nil,
@@ -140,23 +134,51 @@ final class AnnotationEditorController: NSObject {
             selectionFrame: frame,
             desiredSize: CGSize(width: ceil(fittingSize.width), height: 62)
         )
-        let toolbarPanel = EditorPanel(
-            contentRect: toolbarFrame,
+        let rootFrame = frame.union(toolbarFrame)
+        let panel = EditorPanel(
+            contentRect: rootFrame,
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
         )
-        toolbarPanel.level = .screenSaver
-        toolbarPanel.backgroundColor = .clear
-        toolbarPanel.isOpaque = false
-        toolbarPanel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-        toolbarPanel.contentView = toolbarHostingView
-        toolbarPanel.orderFront(nil)
-        self.toolbarPanel = toolbarPanel
-        toolbarPanel.keepAbove(panel)
+        panel.level = .screenSaver
+        panel.backgroundColor = .clear
+        panel.isOpaque = false
+        panel.hasShadow = true
+        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        let rootView = AnnotationEditorRootView(frame: CGRect(origin: .zero, size: rootFrame.size))
+        let canvas = AnnotationCanvasView(
+            image: image,
+            frame: CGRect(
+                x: frame.minX - rootFrame.minX,
+                y: frame.minY - rootFrame.minY,
+                width: frame.width,
+                height: frame.height
+            ),
+            document: document
+        )
+        canvas.onConfirm = { [weak self] in self?.finish() }
+        canvas.onCancel = { [weak self] in self?.close() }
+        canvas.onInteraction = { [weak self] in
+            self?.keepToolbarVisible()
+        }
+        rootView.addCanvas(canvas)
+        rootView.installToolbar(
+            toolbarHostingView,
+            frame: toolbarFrame.offsetBy(dx: -rootFrame.minX, dy: -rootFrame.minY)
+        )
+        panel.contentView = rootView
+        panel.makeKeyAndOrderFront(nil)
+        self.canvasPanel = panel
+        self.canvas = canvas
         NSApp.activate(ignoringOtherApps: true)
         panel.makeKey()
-        toolbarPanel.orderFrontRegardless()
+        rootView.keepToolbarVisible()
+    }
+
+    private func keepToolbarVisible() {
+        guard let rootView = canvasPanel?.contentView as? AnnotationEditorRootView else { return }
+        rootView.keepToolbarVisible()
     }
 
     private func presentDimmingPanels(screenFrame: CGRect, selectionFrame: CGRect) {
