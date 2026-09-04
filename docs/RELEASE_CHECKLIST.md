@@ -38,13 +38,11 @@ For long capture, confirm native pixel width, no duplicated or missing seams, no
 
 ## Direct-distribution signing and notarization
 
-1. Install a valid local **Developer ID Application** certificate and private key controlled by the project maintainer. A cloud-managed export alone cannot locally sign the custom DMG.
-2. In Xcode, archive with the generic macOS destination and export using **Developer ID** distribution.
-3. Keep Hardened Runtime enabled and use a secure timestamp.
-4. Submit the exported archive with Xcode or `notarytool` and wait for an accepted result.
-5. Staple the ticket with `xcrun stapler staple ScreenCapture.app`.
-6. Re-run strict code-signature and Gatekeeper assessment on the stapled artifact.
-7. Package the stapled app as a drag-and-drop DMG and fallback ZIP, notarize and staple the DMG, calculate both SHA-256 checksums, and test the downloaded DMG on a clean Mac.
+1. In Xcode, archive with the generic macOS destination and keep Hardened Runtime and a secure timestamp enabled.
+2. Upload the archive with Xcode Organizer or `scripts/release/notarize-archive.sh`, wait for an accepted result, and export the notarized app.
+3. Re-run strict code-signature, stapler, and Gatekeeper assessment on the exported app.
+4. Install a valid local **Developer ID Application** certificate and private key controlled by the project maintainer. A cloud-managed export alone cannot locally sign the custom DMG; the team's Account Holder must create the traditional certificate or export its identity securely to the release Mac.
+5. Package the stapled app as a drag-and-drop DMG and fallback ZIP, sign, notarize, and staple the DMG, calculate both SHA-256 checksums, and test the downloaded DMG on a clean Mac.
 
 An Apple Development-signed build, an ad-hoc build, or an artifact rejected by Gatekeeper is not a release artifact.
 

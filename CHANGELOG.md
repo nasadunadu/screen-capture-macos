@@ -11,6 +11,7 @@ No user-visible changes yet.
 ### Changed
 
 - Made the direct-distribution pipeline reproducible: notarized releases now produce a drag-and-drop DMG, fallback ZIP, and separate SHA-256 checksums, with packaging smoke-tested by CI.
+- Added a repeatable Xcode cloud-signing path for uploading an archive and exporting the accepted notarized app.
 
 ### Fixed
 

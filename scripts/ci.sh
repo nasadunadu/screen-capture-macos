@@ -22,6 +22,7 @@ zsh -n \
   scripts/ci.sh \
   scripts/release/preflight.sh \
   scripts/release/package.sh \
+  scripts/release/notarize-archive.sh \
   scripts/release/notarize.sh
 git diff --check
 

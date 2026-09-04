@@ -7,6 +7,7 @@ This personal open-source project distributes the macOS app outside the Mac App 
 - a clean commit on the release branch;
 - an explicit semantic version and matching changelog entry;
 - the complete automated and manual release checklist;
+- access to the release team in Xcode for cloud-managed app signing and notarization;
 - a valid local **Developer ID Application** identity and private key for signing the custom DMG;
 - an Xcode notary keychain profile created without storing credentials in this repository.
 
@@ -26,7 +27,16 @@ The preflight runs the full test suite, static analysis, property-list validatio
 4. In Organizer, select **Distribute App → Developer ID**.
 5. Export a Developer ID signed app with Hardened Runtime and a secure timestamp.
 
-Xcode cloud signing can export the app with a **Cloud Managed Developer ID Application** certificate, but its private key is not installed in the local keychain. This release workflow also signs the custom DMG, so create or import a traditional **Developer ID Application** identity for the same team in **Xcode → Settings → Accounts → Manage Certificates** before running the notarization script.
+Xcode cloud signing can export and notarize the app with a **Cloud Managed Developer ID Application** certificate, but its private key is not installed in the local keychain. Given an existing archive, the repeatable cloud-signing path is:
+
+```sh
+./scripts/release/notarize-archive.sh \
+  /path/to/ScreenCapture.xcarchive \
+  TEAM_ID \
+  /path/to/notarized-app-output
+```
+
+The script uploads the archive through Xcode, waits for Apple notarization, exports `ScreenCapture.app`, and requires strict signature, stapler, and Gatekeeper checks to pass. It deliberately does not create a DMG: the custom DMG still needs a traditional **Developer ID Application** identity and private key for the same team. That identity must be created by the team's Account Holder or imported from a maintainer-controlled `.p12` before the final packaging step.
 
 Before the first public binary, replace the development bundle identifier with a stable reverse-DNS identifier controlled by the release owner. Do not commit certificates, private keys, provisioning profiles, or notarization credentials.
 
@@ -34,7 +44,7 @@ Debug builds use `com.nasa.ScreenCapture.debug` and appear as **ScreenCapture De
 
 ## 3. Notarize and package
 
-Store notarization credentials in the login keychain using `notarytool store-credentials`, then run:
+After the local Developer ID identity is available, store notarization credentials in the login keychain using `notarytool store-credentials`, then run:
 
 ```sh
 ./scripts/release/notarize.sh \
@@ -43,7 +53,7 @@ Store notarization credentials in the login keychain using `notarytool store-cre
   /path/to/output
 ```
 
-The script verifies the Developer ID signature, rejects debug entitlements, confirms both CPU architectures, submits and staples the app, creates the final DMG and fallback ZIP, signs the DMG with the app's Developer ID identity, notarizes and staples the DMG, runs Gatekeeper assessment, and writes a SHA-256 checksum beside each download. The DMG presents `ScreenCapture.app` and an `Applications` shortcut at its root so installation is a direct drag-and-drop.
+The app argument may be the output from `notarize-archive.sh`. The script verifies the Developer ID signature, rejects debug entitlements, confirms both CPU architectures, submits and staples the app, creates the final DMG and fallback ZIP, signs the DMG with the app's Developer ID identity, notarizes and staples the DMG, runs Gatekeeper assessment, and writes a SHA-256 checksum beside each download. The DMG presents `ScreenCapture.app` and an `Applications` shortcut at its root so installation is a direct drag-and-drop.
 
 ## 4. Test the distributed artifact
 
