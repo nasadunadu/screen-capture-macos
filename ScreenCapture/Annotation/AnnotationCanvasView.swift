@@ -4,7 +4,7 @@ import Combine
 @MainActor
 final class AnnotationCanvasView: NSView, NSTextFieldDelegate {
     static let keyboardTools: [AnnotationTool] = [
-        .rectangle, .ellipse, .line, .arrow, .pen, .text, .spotlight
+        .rectangle, .ellipse, .line, .arrow, .pen, .text
     ]
 
     let sourceImage: CGImage
@@ -19,6 +19,8 @@ final class AnnotationCanvasView: NSView, NSTextFieldDelegate {
     private var editingField: NSTextField?
     private var editingElementID: UUID?
     private var cancellable: AnyCancellable?
+    private var toolCancellable: AnyCancellable?
+    private var isPointerInside = false
 
     override var acceptsFirstResponder: Bool { true }
 
@@ -33,6 +35,15 @@ final class AnnotationCanvasView: NSView, NSTextFieldDelegate {
         cancellable = document.objectWillChange.sink { [weak self] _ in
             DispatchQueue.main.async { self?.needsDisplay = true }
         }
+        toolCancellable = document.$tool.removeDuplicates().sink { [weak self] tool in
+            DispatchQueue.main.async { self?.applyCursor(for: tool) }
+        }
+        addTrackingArea(NSTrackingArea(
+            rect: .zero,
+            options: [.activeAlways, .mouseEnteredAndExited, .inVisibleRect],
+            owner: self,
+            userInfo: nil
+        ))
     }
 
     @available(*, unavailable)
@@ -41,6 +52,24 @@ final class AnnotationCanvasView: NSView, NSTextFieldDelegate {
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         window?.makeFirstResponder(self)
+    }
+
+    override func viewWillMove(toWindow newWindow: NSWindow?) {
+        if newWindow == nil, isPointerInside {
+            isPointerInside = false
+            NSCursor.arrow.set()
+        }
+        super.viewWillMove(toWindow: newWindow)
+    }
+
+    override func mouseEntered(with event: NSEvent) {
+        isPointerInside = true
+        applyCursor(for: document.tool)
+    }
+
+    override func mouseExited(with event: NSEvent) {
+        isPointerInside = false
+        NSCursor.arrow.set()
     }
 
     override func draw(_ dirtyRect: NSRect) {
@@ -83,7 +112,7 @@ final class AnnotationCanvasView: NSView, NSTextFieldDelegate {
             start: point,
             end: point,
             points: points,
-            style: document.style
+            style: document.consumeDrawingStyle()
         )
         activeElementID = element.id
         document.append(element)
@@ -182,6 +211,15 @@ final class AnnotationCanvasView: NSView, NSTextFieldDelegate {
         }
     }
 
+    private func applyCursor(for tool: AnnotationTool) {
+        guard isPointerInside else { return }
+        if AnnotationPrecisionCursor.isUsed(for: tool) {
+            AnnotationPrecisionCursor.cursor.set()
+        } else {
+            NSCursor.arrow.set()
+        }
+    }
+
     private func draw(element: AnnotationElement, in canvas: CGRect) {
         let color = element.style.color.withAlphaComponent(element.style.opacity)
         color.setStroke()
@@ -263,7 +301,7 @@ final class AnnotationCanvasView: NSView, NSTextFieldDelegate {
         field.placeholderString = "输入文字"
         field.isBordered = true
         field.backgroundColor = NSColor.windowBackgroundColor.withAlphaComponent(0.95)
-        let editingStyle = element?.style ?? document.style
+        let editingStyle = element?.style ?? document.drawingStyle
         field.textColor = editingStyle.color
         field.font = NSFont.systemFont(ofSize: max(16, editingStyle.lineWidth * 4), weight: .semibold)
         field.delegate = self
@@ -292,7 +330,7 @@ final class AnnotationCanvasView: NSView, NSTextFieldDelegate {
                     start: field.frame.origin,
                     end: field.frame.origin,
                     text: value,
-                    style: document.style
+                    style: document.consumeDrawingStyle()
                 )
                 document.append(element)
             }

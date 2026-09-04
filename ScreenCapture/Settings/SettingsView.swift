@@ -164,9 +164,9 @@ struct SettingsView: View {
     private var annotationSettings: some View {
         Form {
             Section("内置工具") {
-                Text("矩形、椭圆、直线、箭头、画笔、文字、聚光高亮")
+                Text("矩形、椭圆、直线、箭头、画笔、文字")
                     .foregroundStyle(.secondary)
-                Text("工具快捷键：1–7 · 撤销：⌘Z · 重做：⇧⌘Z · 删除：⌫")
+                Text("工具快捷键：1–6 · 撤销：⌘Z · 重做：⇧⌘Z · 删除：⌫")
                     .foregroundStyle(.secondary)
             }
             Section("截图效果") {

@@ -8,15 +8,53 @@ final class AnnotationToolbarTests: XCTestCase {
         let tools = AnnotationToolbarView.primaryTools
         XCTAssertEqual(
             tools,
-            [.rectangle, .ellipse, .line, .arrow, .pen, .text, .spotlight]
+            [.rectangle, .ellipse, .line, .arrow, .pen, .text]
         )
         XCTAssertFalse(tools.contains(.select))
+        XCTAssertFalse(tools.contains(.spotlight))
         XCTAssertEqual(AnnotationCanvasView.keyboardTools, tools)
     }
 
     @MainActor
     func testArrowIsActiveBeforeTheFirstAnnotationDrag() {
         XCTAssertEqual(AnnotationDocument().tool, .arrow)
+    }
+
+    @MainActor
+    func testFirstToolSelectionImmediatelyPresentsLineWidthOptions() {
+        XCTAssertEqual(
+            AnnotationToolbarView.optionsToolAfterSelecting(
+                .line,
+                currentTool: .arrow,
+                presentedTool: nil
+            ),
+            .line
+        )
+        XCTAssertEqual(
+            AnnotationToolbarView.optionsToolAfterSelecting(
+                .arrow,
+                currentTool: .arrow,
+                presentedTool: nil
+            ),
+            .arrow
+        )
+        XCTAssertNil(
+            AnnotationToolbarView.optionsToolAfterSelecting(
+                .arrow,
+                currentTool: .arrow,
+                presentedTool: .arrow
+            )
+        )
+    }
+
+    @MainActor
+    func testLineAndArrowUseCenteredPrecisionCursor() {
+        XCTAssertTrue(AnnotationPrecisionCursor.isUsed(for: .line))
+        XCTAssertTrue(AnnotationPrecisionCursor.isUsed(for: .arrow))
+        XCTAssertFalse(AnnotationPrecisionCursor.isUsed(for: .rectangle))
+        XCTAssertFalse(AnnotationPrecisionCursor.isUsed(for: .pen))
+        XCTAssertEqual(AnnotationPrecisionCursor.cursor.image.size, AnnotationPrecisionCursor.imageSize)
+        XCTAssertEqual(AnnotationPrecisionCursor.cursor.hotSpot, AnnotationPrecisionCursor.hotSpot)
     }
 
     @MainActor

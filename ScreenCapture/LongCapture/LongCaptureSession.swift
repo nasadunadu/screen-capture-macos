@@ -16,6 +16,7 @@ final class LongCaptureSession: ObservableObject {
     private var previousFrame: CGImage?
     private var pendingFrames: [PendingFrame] = []
     private var outputHeight = 0
+    private var fixedFooterTrim = 0
     private var lastSignature: FrameSignature?
     private var captureStream: RegionCaptureStream?
     private var startupTask: Task<Void, Never>?
@@ -194,7 +195,11 @@ final class LongCaptureSession: ObservableObject {
                 continue
             }
             do {
-                try append(candidate.image, overlap: alignment.overlap)
+                try append(
+                    candidate.image,
+                    overlap: alignment.overlap,
+                    trailingTrim: alignment.trailingTrim
+                )
                 consecutiveAlignmentFailures = 0
                 status = pendingFrames.isEmpty
                     ? "已拼接 \(frameCount) 帧，继续滚动或完成"
@@ -214,10 +219,23 @@ final class LongCaptureSession: ObservableObject {
         NSSound.beep()
     }
 
-    private func append(_ image: CGImage, overlap: Int?) throws {
+    private func append(
+        _ image: CGImage,
+        overlap: Int?,
+        trailingTrim: Int = 0
+    ) throws {
         let segment: CGImage
         if let overlap {
-            segment = try ScrollStitcher.newContentSegment(from: image, overlap: overlap)
+            if fixedFooterTrim == 0, trailingTrim > 0 {
+                try removeFixedFooterFromFirstSegment(trailingTrim)
+            }
+            fixedFooterTrim = max(fixedFooterTrim, trailingTrim)
+            let effectiveTrailingTrim = min(fixedFooterTrim, max(0, overlap - 1))
+            segment = try ScrollStitcher.newContentSegment(
+                from: image,
+                overlap: overlap,
+                trailingTrim: effectiveTrailingTrim
+            )
         } else {
             segment = image
         }
@@ -233,6 +251,23 @@ final class LongCaptureSession: ObservableObject {
         errorMessage = nil
         if previewPanel != nil {
             previewSegments.append(NSImage(cgImage: segment, size: .zero))
+        }
+    }
+
+    private func removeFixedFooterFromFirstSegment(_ trim: Int) throws {
+        guard outputSegments.count == 1,
+              trim > 0,
+              trim < outputSegments[0].height,
+              let body = outputSegments[0].cropping(to: CGRect(
+                  x: 0,
+                  y: 0,
+                  width: outputSegments[0].width,
+                  height: outputSegments[0].height - trim
+              )) else { return }
+        outputSegments[0] = body
+        outputHeight -= trim
+        if previewSegments.count == 1 {
+            previewSegments[0] = NSImage(cgImage: body, size: .zero)
         }
     }
 
@@ -382,6 +417,7 @@ final class LongCaptureSession: ObservableObject {
         previousFrame = nil
         pendingFrames.removeAll()
         outputHeight = 0
+        fixedFooterTrim = 0
         consecutiveAlignmentFailures = 0
         previewSegments.removeAll()
         frameCount = 0

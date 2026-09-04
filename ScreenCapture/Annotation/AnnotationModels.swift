@@ -183,6 +183,7 @@ struct AnnotationElement: Identifiable {
 final class AnnotationDocument: ObservableObject {
     @Published var tool: AnnotationTool = .arrow
     @Published var style = AnnotationStyle()
+    @Published private(set) var oneShotColor: NSColor?
     @Published private(set) var elements: [AnnotationElement] = []
     @Published var selectedElementID: UUID?
 
@@ -198,6 +199,12 @@ final class AnnotationDocument: ObservableObject {
               let selected = element(id: selectedElementID),
               selected.tool.supportsColor else { return style.color }
         return selected.style.color
+    }
+    var nextDrawingColor: NSColor { oneShotColor ?? style.color }
+    var drawingStyle: AnnotationStyle {
+        var drawingStyle = style
+        drawingStyle.color = nextDrawingColor
+        return drawingStyle
     }
     var activeLineWidth: CGFloat {
         guard let selectedElementID,
@@ -226,6 +233,7 @@ final class AnnotationDocument: ObservableObject {
 
     func setColor(_ color: NSColor) {
         style.color = color
+        oneShotColor = nil
         guard let selectedElementID,
               let index = elements.firstIndex(where: { $0.id == selectedElementID }),
               elements[index].tool.supportsColor,
@@ -233,6 +241,16 @@ final class AnnotationDocument: ObservableObject {
         beginMutation()
         elements[index].style.color = color
         objectWillChange.send()
+    }
+
+    func setOneShotColor(_ color: NSColor) {
+        oneShotColor = color
+    }
+
+    func consumeDrawingStyle() -> AnnotationStyle {
+        let result = drawingStyle
+        oneShotColor = nil
+        return result
     }
 
     func beginLineWidthAdjustment() {

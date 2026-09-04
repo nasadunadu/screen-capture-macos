@@ -51,6 +51,100 @@ final class ScrollStitcherTests: XCTestCase {
 
         let alignment = try XCTUnwrap(ScrollStitcher.alignment(previous: first, next: second))
         XCTAssertLessThanOrEqual(abs(alignment.scrollDelta - 180), 5)
+        XCTAssertEqual(alignment.trailingTrim, 0)
+    }
+
+    func testFixedHeaderAwareFallbackFindsScrollingContent() throws {
+        let width = 48
+        let height = 120
+        let fixedHeaderHeight = 24
+        let scrollDelta = 30
+
+        func makeFrame(offset: Int) -> GrayFrame {
+            var bytes = [UInt8](repeating: 0, count: width * height)
+            for y in 0..<height {
+                for x in 0..<width {
+                    let sourceY = y < fixedHeaderHeight ? y : y - fixedHeaderHeight + offset
+                    bytes[y * width + x] = UInt8(
+                        truncatingIfNeeded: (sourceY * 73) ^ (x * 19) ^ (sourceY >> 2)
+                    )
+                }
+            }
+            return GrayFrame(width: width, height: height, bytes: bytes)
+        }
+
+        let match = try XCTUnwrap(
+            ScrollStitcher.fixedEdgeAwareOverlap(
+                previous: makeFrame(offset: 0),
+                next: makeFrame(offset: scrollDelta)
+            )
+        )
+        XCTAssertLessThanOrEqual(abs(match.rows - (height - scrollDelta)), 2)
+        XCTAssertLessThan(match.score, 0.16)
+    }
+
+    func testFixedHeaderAndFooterDoNotHideScrollingContent() throws {
+        let width = 48
+        let height = 144
+        let headerHeight = 24
+        let footerHeight = 24
+        let scrollDelta = 30
+
+        func makeFrame(offset: Int) -> GrayFrame {
+            var bytes = [UInt8](repeating: 0, count: width * height)
+            for y in 0..<height {
+                for x in 0..<width {
+                    let sourceY: Int
+                    if y < headerHeight {
+                        sourceY = y
+                    } else if y >= height - footerHeight {
+                        sourceY = 10_000 + y
+                    } else {
+                        sourceY = y - headerHeight + offset
+                    }
+                    bytes[y * width + x] = UInt8(
+                        truncatingIfNeeded: (sourceY * 73) ^ (x * 19) ^ (sourceY >> 2)
+                    )
+                }
+            }
+            return GrayFrame(width: width, height: height, bytes: bytes)
+        }
+
+        let match = try XCTUnwrap(
+            ScrollStitcher.fixedEdgeAwareOverlap(
+                previous: makeFrame(offset: 0),
+                next: makeFrame(offset: scrollDelta)
+            )
+        )
+        XCTAssertLessThanOrEqual(abs(match.rows - (height - scrollDelta)), 3)
+        XCTAssertLessThan(match.score, 0.16)
+    }
+
+    func testAlignmentTrimsARepeatedFixedFooterFromNewContent() throws {
+        let first = makePatternWithStickyEdges(
+            width: 360,
+            height: 600,
+            offset: 0,
+            headerHeight: 90,
+            footerHeight: 72
+        )
+        let second = makePatternWithStickyEdges(
+            width: 360,
+            height: 600,
+            offset: 180,
+            headerHeight: 90,
+            footerHeight: 72
+        )
+
+        let alignment = try XCTUnwrap(ScrollStitcher.alignment(previous: first, next: second))
+        XCTAssertLessThanOrEqual(abs(alignment.scrollDelta - 180), 5)
+        XCTAssertGreaterThan(alignment.trailingTrim, 0)
+        let segment = try ScrollStitcher.newContentSegment(
+            from: second,
+            overlap: alignment.overlap,
+            trailingTrim: alignment.trailingTrim
+        )
+        XCTAssertEqual(segment.height, alignment.scrollDelta)
     }
 
     func testPrevalidatedOverlapProducesDeterministicOutputSize() throws {
@@ -145,6 +239,48 @@ final class ScrollStitcherTests: XCTestCase {
         for y in 0..<height {
             for x in 0..<width {
                 let sourceY = y < headerHeight ? y : y + offset
+                let value = UInt8(truncatingIfNeeded: (sourceY * 73) ^ (x * 19) ^ (sourceY >> 2))
+                let index = (y * width + x) * 4
+                bytes[index] = value
+                bytes[index + 1] = UInt8(truncatingIfNeeded: Int(value) * 3)
+                bytes[index + 2] = UInt8(truncatingIfNeeded: Int(value) * 7)
+                bytes[index + 3] = 255
+            }
+        }
+        let provider = CGDataProvider(data: Data(bytes) as CFData)!
+        return CGImage(
+            width: width,
+            height: height,
+            bitsPerComponent: 8,
+            bitsPerPixel: 32,
+            bytesPerRow: width * 4,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedLast.rawValue),
+            provider: provider,
+            decode: nil,
+            shouldInterpolate: false,
+            intent: .defaultIntent
+        )!
+    }
+
+    private func makePatternWithStickyEdges(
+        width: Int,
+        height: Int,
+        offset: Int,
+        headerHeight: Int,
+        footerHeight: Int
+    ) -> CGImage {
+        var bytes = [UInt8](repeating: 0, count: width * height * 4)
+        for y in 0..<height {
+            for x in 0..<width {
+                let sourceY: Int
+                if y < headerHeight {
+                    sourceY = y
+                } else if y >= height - footerHeight {
+                    sourceY = 10_000 + y
+                } else {
+                    sourceY = y - headerHeight + offset
+                }
                 let value = UInt8(truncatingIfNeeded: (sourceY * 73) ^ (x * 19) ^ (sourceY >> 2))
                 let index = (y * width + x) * 4
                 bytes[index] = value

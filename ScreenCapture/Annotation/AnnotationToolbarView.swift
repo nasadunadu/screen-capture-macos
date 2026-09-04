@@ -2,8 +2,7 @@ import SwiftUI
 
 struct AnnotationToolbarView: View {
     static let primaryTools: [AnnotationTool] = [
-        .rectangle, .ellipse, .line, .arrow, .pen,
-        .text, .spotlight
+        .rectangle, .ellipse, .line, .arrow, .pen, .text
     ]
 
     @ObservedObject var document: AnnotationDocument
@@ -69,13 +68,16 @@ struct AnnotationToolbarView: View {
 
     private func toolButton(_ tool: AnnotationTool) -> some View {
         Button {
-            if document.tool == tool {
-                optionsTool = tool.hasStyleOptions ? tool : nil
-            } else {
+            let currentTool = document.tool
+            if currentTool != tool {
                 document.tool = tool
                 document.selectedElementID = nil
-                optionsTool = nil
             }
+            optionsTool = Self.optionsToolAfterSelecting(
+                tool,
+                currentTool: currentTool,
+                presentedTool: optionsTool
+            )
         } label: {
             Image(systemName: tool.systemImage)
                 .font(.system(size: 21, weight: .regular))
@@ -85,13 +87,23 @@ struct AnnotationToolbarView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         }
         .buttonStyle(.plain)
-        .help(tool.hasStyleOptions ? "\(tool.title)；再次点击设置线宽和样式" : tool.title)
+        .help(tool.hasStyleOptions ? "\(tool.title)；点击设置粗细和样式" : tool.title)
         .popover(isPresented: Binding(
             get: { optionsTool == tool },
             set: { if !$0, optionsTool == tool { optionsTool = nil } }
         ), arrowEdge: .bottom) {
             AnnotationStyleOptionsView(document: document, tool: tool)
         }
+    }
+
+    static func optionsToolAfterSelecting(
+        _ tool: AnnotationTool,
+        currentTool: AnnotationTool,
+        presentedTool: AnnotationTool?
+    ) -> AnnotationTool? {
+        guard tool.hasStyleOptions else { return nil }
+        if currentTool == tool, presentedTool == tool { return nil }
+        return tool
     }
 
     private func actionButton(
@@ -127,7 +139,7 @@ private struct AnnotationGlobalColorControl: View {
             isPresented.toggle()
         } label: {
             Circle()
-                .fill(Color(nsColor: document.activeColor))
+                .fill(Color(nsColor: document.style.color))
                 .overlay(Circle().stroke(.secondary, lineWidth: 1))
                 .frame(width: 23, height: 23)
                 .frame(width: 42, height: 42)
@@ -151,8 +163,8 @@ private struct AnnotationGlobalColorControl: View {
                                 .fill(Color(nsColor: color))
                                 .overlay {
                                     Circle().stroke(
-                                        document.activeColor.isEqual(color) ? Color.accentColor : Color.secondary.opacity(0.4),
-                                        lineWidth: document.activeColor.isEqual(color) ? 3 : 1
+                                        document.style.color.isEqual(color) ? Color.accentColor : Color.secondary.opacity(0.4),
+                                        lineWidth: document.style.color.isEqual(color) ? 3 : 1
                                     )
                                 }
                                 .padding(3)
@@ -167,7 +179,7 @@ private struct AnnotationGlobalColorControl: View {
                 ColorPicker(
                     "自定义颜色",
                     selection: Binding(
-                        get: { Color(nsColor: document.activeColor) },
+                        get: { Color(nsColor: document.style.color) },
                         set: { document.setColor(NSColor($0)) }
                     ),
                     supportsOpacity: false
@@ -183,6 +195,10 @@ private struct AnnotationStyleOptionsView: View {
     @ObservedObject var document: AnnotationDocument
     let tool: AnnotationTool
 
+    private let commonColors: [NSColor] = [
+        .systemRed, .systemPink, .systemBlue, .systemYellow, .systemGreen
+    ]
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("\(tool.title)样式")
@@ -190,7 +206,7 @@ private struct AnnotationStyleOptionsView: View {
 
             if tool.supportsLineWidth {
                 HStack(spacing: 10) {
-                    Text("线宽")
+                    Text("粗细")
                     Slider(
                         value: Binding(
                             get: { Double(document.activeLineWidth) },
@@ -202,10 +218,77 @@ private struct AnnotationStyleOptionsView: View {
                             isEditing ? document.beginLineWidthAdjustment() : document.endLineWidthAdjustment()
                         }
                     )
-                    Text("\(Int(document.activeLineWidth.rounded()))")
+                    Text("\(Int(document.activeLineWidth.rounded())) px")
                         .font(.system(.body, design: .monospaced, weight: .semibold))
-                        .frame(width: 22, alignment: .trailing)
+                        .frame(width: 46, alignment: .trailing)
                 }
+
+                Capsule(style: .continuous)
+                    .fill(Color(nsColor: document.nextDrawingColor))
+                    .frame(height: max(1, min(18, document.activeLineWidth)))
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 22)
+                    .accessibilityHidden(true)
+
+                Divider()
+
+                HStack(spacing: 10) {
+                    Text("本次颜色")
+
+                    Spacer(minLength: 4)
+
+                    ForEach(Array(commonColors.enumerated()), id: \.offset) { _, color in
+                        Button {
+                            document.setOneShotColor(color)
+                        } label: {
+                            Circle()
+                                .fill(Color(nsColor: color))
+                                .overlay {
+                                    Circle().stroke(
+                                        document.nextDrawingColor.isEqual(color)
+                                            ? Color.accentColor
+                                            : Color.secondary.opacity(0.35),
+                                        lineWidth: document.nextDrawingColor.isEqual(color) ? 3 : 1
+                                    )
+                                }
+                                .padding(3)
+                                .frame(width: 28, height: 28)
+                        }
+                        .buttonStyle(.plain)
+                        .help("下一笔使用\(color.accessibilityName)")
+                        .accessibilityLabel("下一笔使用\(color.accessibilityName)")
+                    }
+
+                    Button {
+                        AnnotationColorPanelPresenter.shared.present(
+                            color: document.nextDrawingColor,
+                            onChange: { [weak document] color in
+                                document?.setOneShotColor(color)
+                            }
+                        )
+                    } label: {
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .fill(
+                                LinearGradient(
+                                    colors: [.red, .yellow, .green, .cyan, .blue, .purple, .pink, .red],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .overlay {
+                                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                    .stroke(.white.opacity(0.75), lineWidth: 1)
+                            }
+                            .frame(width: 44, height: 24)
+                    }
+                    .buttonStyle(.plain)
+                    .help("自由选择下一笔颜色")
+                    .accessibilityLabel("自由选择下一笔颜色")
+                }
+
+                Text("仅影响下一次绘制，不改变工具条的全局默认色")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             if tool == .rectangle || tool == .ellipse {
@@ -228,6 +311,30 @@ private struct AnnotationStyleOptionsView: View {
     }
 }
 
+@MainActor
+private final class AnnotationColorPanelPresenter: NSObject {
+    static let shared = AnnotationColorPanelPresenter()
+
+    private var onChange: ((NSColor) -> Void)?
+
+    func present(color: NSColor, onChange: @escaping (NSColor) -> Void) {
+        self.onChange = onChange
+        let panel = NSColorPanel.shared
+        panel.showsAlpha = false
+        panel.mode = .wheel
+        panel.color = color
+        panel.level = NSWindow.Level(rawValue: NSWindow.Level.screenSaver.rawValue + 1)
+        panel.setTarget(self)
+        panel.setAction(#selector(colorDidChange(_:)))
+        NSApp.activate(ignoringOtherApps: true)
+        panel.makeKeyAndOrderFront(nil)
+    }
+
+    @objc private func colorDidChange(_ sender: NSColorPanel) {
+        onChange?(sender.color)
+    }
+}
+
 private extension AnnotationTool {
     var hasStyleOptions: Bool {
         supportsLineWidth || self == .spotlight
@@ -237,6 +344,7 @@ private extension AnnotationTool {
 private extension NSColor {
     var accessibilityName: String {
         if self == .systemRed { return "红色" }
+        if self == .systemPink { return "粉色" }
         if self == .systemOrange { return "橙色" }
         if self == .systemYellow { return "黄色" }
         if self == .systemGreen { return "绿色" }

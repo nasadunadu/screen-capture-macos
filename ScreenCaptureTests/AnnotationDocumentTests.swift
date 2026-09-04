@@ -69,6 +69,28 @@ final class AnnotationDocumentTests: XCTestCase {
         XCTAssertTrue(document.element(id: annotation.id)?.style.color.isEqual(NSColor.systemRed) == true)
     }
 
+    func testOneShotColorDoesNotChangeGlobalDefaultAndIsConsumedOnce() {
+        let document = AnnotationDocument()
+
+        document.setOneShotColor(.systemBlue)
+
+        XCTAssertTrue(document.style.color.isEqual(NSColor.systemRed))
+        XCTAssertTrue(document.nextDrawingColor.isEqual(NSColor.systemBlue))
+        XCTAssertTrue(document.consumeDrawingStyle().color.isEqual(NSColor.systemBlue))
+        XCTAssertNil(document.oneShotColor)
+        XCTAssertTrue(document.consumeDrawingStyle().color.isEqual(NSColor.systemRed))
+    }
+
+    func testChangingGlobalColorClearsPendingOneShotColor() {
+        let document = AnnotationDocument()
+        document.setOneShotColor(.systemBlue)
+
+        document.setColor(.systemGreen)
+
+        XCTAssertNil(document.oneShotColor)
+        XCTAssertTrue(document.nextDrawingColor.isEqual(NSColor.systemGreen))
+    }
+
     func testColorDoesNotMutateSelectedColorlessAnnotation() {
         let document = AnnotationDocument()
         let annotation = element(tool: .spotlight)
@@ -214,6 +236,42 @@ final class AnnotationDocumentTests: XCTestCase {
 
         XCTAssertTrue(notified)
         XCTAssertEqual(document.elements.count, 1)
+    }
+
+    func testCanvasConsumesOneShotColorWithoutChangingGlobalColor() throws {
+        let context = try XCTUnwrap(CGContext(
+            data: nil,
+            width: 2,
+            height: 2,
+            bitsPerComponent: 8,
+            bytesPerRow: 0,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ))
+        let document = AnnotationDocument()
+        document.setOneShotColor(.systemBlue)
+        let canvas = AnnotationCanvasView(
+            image: try XCTUnwrap(context.makeImage()),
+            frame: CGRect(x: 0, y: 0, width: 100, height: 100),
+            document: document
+        )
+        let event = try XCTUnwrap(NSEvent.mouseEvent(
+            with: .leftMouseDown,
+            location: CGPoint(x: 20, y: 20),
+            modifierFlags: [],
+            timestamp: 0,
+            windowNumber: 0,
+            context: nil,
+            eventNumber: 0,
+            clickCount: 1,
+            pressure: 0
+        ))
+
+        canvas.mouseDown(with: event)
+
+        XCTAssertTrue(document.elements.first?.style.color.isEqual(NSColor.systemBlue) == true)
+        XCTAssertTrue(document.style.color.isEqual(NSColor.systemRed))
+        XCTAssertNil(document.oneShotColor)
     }
 
     private func element(tool: AnnotationTool) -> AnnotationElement {

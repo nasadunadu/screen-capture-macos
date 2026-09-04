@@ -20,6 +20,43 @@ struct DisplaySnapshot {
     let windows: [WindowCandidate]
 }
 
+struct ScreenDisplayCandidate: Equatable {
+    let displayID: CGDirectDisplayID
+    let frame: CGRect
+}
+
+enum ScreenDisplayMatcher {
+    static func selectDisplayID(
+        preferredID: CGDirectDisplayID?,
+        preferredFrame: CGRect,
+        currentScreens: [ScreenDisplayCandidate],
+        availableDisplayIDs: [CGDirectDisplayID]
+    ) -> CGDirectDisplayID? {
+        guard !availableDisplayIDs.isEmpty else { return nil }
+        let available = Set(availableDisplayIDs)
+        if let preferredID, available.contains(preferredID) { return preferredID }
+
+        let matchingScreens = currentScreens.filter { available.contains($0.displayID) }
+        let bestOverlap = matchingScreens.max { left, right in
+            overlapArea(left.frame, preferredFrame) < overlapArea(right.frame, preferredFrame)
+        }
+        if let bestOverlap, overlapArea(bestOverlap.frame, preferredFrame) > 0 {
+            return bestOverlap.displayID
+        }
+        if let currentMainDisplay = matchingScreens.first?.displayID {
+            return currentMainDisplay
+        }
+        return availableDisplayIDs.first
+    }
+
+    private static func overlapArea(_ left: CGRect, _ right: CGRect) -> CGFloat {
+        guard left.isFinite, right.isFinite else { return 0 }
+        let intersection = left.intersection(right)
+        guard !intersection.isNull, !intersection.isEmpty else { return 0 }
+        return intersection.width * intersection.height
+    }
+}
+
 enum CaptureServiceError: LocalizedError {
     case permissionDenied
     case displayUnavailable
@@ -50,10 +87,10 @@ final class ScreenCaptureService {
         if !ScreenCapturePermission.isGranted {
             _ = ScreenCapturePermission.request()
         }
-        guard let screen = requestedScreen ?? screenUnderPointer(),
-              let displayID = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID else {
+        guard let preferredScreen = requestedScreen ?? screenUnderPointer() else {
             throw CaptureServiceError.displayUnavailable
         }
+        let preferredDisplayID = displayID(for: preferredScreen)
 
         let content: SCShareableContent
         do {
@@ -65,7 +102,23 @@ final class ScreenCaptureService {
             }
             throw error
         }
-        guard let display = content.displays.first(where: { $0.displayID == displayID }) else {
+        let currentScreens = NSScreen.screens.compactMap { screen -> ScreenDisplayCandidate? in
+            guard let displayID = displayID(for: screen) else { return nil }
+            return ScreenDisplayCandidate(displayID: displayID, frame: screen.frame)
+        }
+        guard let displayID = ScreenDisplayMatcher.selectDisplayID(
+            preferredID: preferredDisplayID,
+            preferredFrame: preferredScreen.frame,
+            currentScreens: currentScreens,
+            availableDisplayIDs: content.displays.map(\.displayID)
+        ),
+        let display = content.displays.first(where: { $0.displayID == displayID }),
+        let screen = NSScreen.screens.first(where: { self.displayID(for: $0) == displayID })
+            ?? NSScreen.screens.max(by: {
+                $0.frame.intersection(preferredScreen.frame).area
+                    < $1.frame.intersection(preferredScreen.frame).area
+            })
+            ?? NSScreen.main else {
             throw CaptureServiceError.displayUnavailable
         }
         let ownBundleID = Bundle.main.bundleIdentifier
@@ -246,12 +299,34 @@ final class ScreenCaptureService {
 
     private func nativeScale(for screen: NSScreen, displayID: CGDirectDisplayID? = nil) -> CGFloat {
         let resolvedDisplayID = displayID
-            ?? (screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID)
+            ?? self.displayID(for: screen)
         if let resolvedDisplayID,
            let mode = CGDisplayCopyDisplayMode(resolvedDisplayID),
            mode.width > 0 {
             return CGFloat(mode.pixelWidth) / CGFloat(mode.width)
         }
         return max(1, screen.backingScaleFactor)
+    }
+
+    private func displayID(for screen: NSScreen) -> CGDirectDisplayID? {
+        let value = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")]
+        if let number = value as? NSNumber, number.uint32Value != 0 {
+            return number.uint32Value
+        }
+        if let displayID = value as? CGDirectDisplayID, displayID != 0 {
+            return displayID
+        }
+        return nil
+    }
+}
+
+private extension CGRect {
+    var area: CGFloat {
+        guard isFinite, !isNull, !isEmpty else { return 0 }
+        return width * height
+    }
+
+    var isFinite: Bool {
+        origin.x.isFinite && origin.y.isFinite && width.isFinite && height.isFinite
     }
 }

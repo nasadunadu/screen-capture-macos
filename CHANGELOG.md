@@ -16,6 +16,14 @@ No user-visible changes yet.
 - Removed cursor-rect invalidation calls from the drag lifecycle so selection updates no longer race the AppKit display-cycle tracker.
 - Isolated Debug and Release bundle identities so local development builds cannot replace the screen-recording permission record of the Developer ID-signed app.
 - Limited the native screen-recording consent request to once per process launch; later denied attempts use the recoverable settings flow without repeatedly invoking the system request API.
+- Added a centered purple precision crosshair over the screenshot canvas whenever the line or arrow tool is active.
+- Removed the unused spotlight tool from the visible toolbar and number-key workflow.
+- Opened each drawing tool's thickness slider on its first click and added a live stroke preview to the style panel.
+- Added a one-shot color row to the thickness card, with common swatches and a native free-color picker that does not change the global default color.
+- Presented free color as a horizontal rainbow swatch and opened the native macOS color wheel directly when it is clicked.
+- Added fixed-edge-aware long-capture matching so sticky page headers or footers no longer prevent otherwise valid scrolling content from being stitched.
+- Reduced fixed-edge matching latency, handled pages with both a fixed header and footer, and removed repeated fixed footers from appended long-capture segments.
+- Re-resolve the active ScreenCaptureKit display after screen topology or lock-state changes, preventing stale display identifiers from reporting that the pointer's display cannot be found.
 
 ## [0.4.10] - 2026-09-03
 
