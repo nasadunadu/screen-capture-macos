@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+No user-visible changes yet.
+
+## [0.4.12] - 2026-09-05
+
 ### Fixed
 
 - Propagated export cancellation to background processing and checked cancellation before clipboard updates, preventing cancelled processing from subsequently saving or copying its result.

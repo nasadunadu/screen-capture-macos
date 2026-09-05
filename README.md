@@ -24,7 +24,7 @@ Screen Capture is built for two everyday jobs: a fast annotated screenshot and a
 
 - Region, window, full-screen, previous-area, preset-size, and delayed capture
 - Retina-native capture with lossless PNG export by default
-- Compact inline annotation: rectangle, ellipse, line, tapered arrow, pen, spotlight, and text
+- Compact inline annotation: rectangle, ellipse, line, tapered arrow, pen, and text
 - Global color and line-width controls, selection editing, undo, and redo
 - Adjustable capture region with clear outside dimming and four resize handles
 - Scrolling capture with a live viewport, borderless stitched preview, sticky-header handling, and fast-scroll recovery
@@ -42,7 +42,9 @@ Screen recording, audio recording, translation, OCR, accounts, telemetry, and cl
 
 ## Project status
 
-`0.4.11` is the current local validation candidate for this independently maintained personal open-source project. The source builds and its automated suite pass on macOS; this candidate must be manually verified before it is published as a downloadable release.
+Download the signed, notarized app from [GitHub Releases](https://github.com/nasadunadu/screen-capture-macos/releases/latest). Open the DMG and drag ScreenCapture into Applications; a ZIP download is also provided. No Xcode installation is needed to use the app.
+
+`0.4.12` is a stability patch for this independently maintained personal open-source project. See each release's notes for verification results and compatibility limits; automated validation does not replace testing on every supported Mac.
 
 ## Requirements
 
