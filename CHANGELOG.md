@@ -4,7 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-No user-visible changes yet.
+### Fixed
+
+- Propagated export cancellation to background processing and checked cancellation before clipboard updates, preventing cancelled processing from subsequently saving or copying its result.
+- Reserved automatic export filenames while processing is in flight so overlapping exports in the same second cannot overwrite one another within the app's shared exporter.
+- Deferred shortcut re-registration until published settings have finished updating, including when resetting optional shortcuts.
+- Bounded long-capture frame delivery before image conversion, preventing a busy main actor from accumulating an unbounded queue of full-resolution images.
 
 ## [0.4.11] - 2026-09-04
 

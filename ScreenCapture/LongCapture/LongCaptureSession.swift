@@ -50,7 +50,7 @@ final class LongCaptureSession: ObservableObject {
                     snapshot: context.snapshot,
                     selection: context.selectionRect,
                     onFrame: { [weak self] frame in
-                        Task { @MainActor [weak self] in self?.receive(frame) }
+                        await self?.receive(frame)
                     },
                     onError: { [weak self] error in
                         Task { @MainActor [weak self] in self?.receiveStreamError(error) }

@@ -14,19 +14,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let manager = HotKeyManager()
         hotKeys = manager
 
-        let primaryShortcuts = Publishers.CombineLatest4(
-            AppSettings.shared.$normalShortcut,
-            AppSettings.shared.$longCaptureShortcut,
-            AppSettings.shared.$windowShortcut,
-            AppSettings.shared.$fullScreenShortcut
-        )
-        let secondaryShortcuts = Publishers.CombineLatest3(
-            AppSettings.shared.$previousAreaShortcut,
-            AppSettings.shared.$presetAreaShortcut,
-            AppSettings.shared.$delayedFullScreenShortcut
-        )
-        primaryShortcuts.combineLatest(secondaryShortcuts)
-            .sink { [weak self] _ in self?.registerShortcuts() }
+        Self.observeShortcuts(settings: .shared) { [weak self] in self?.registerShortcuts() }
             .store(in: &cancellables)
 
         NotificationCenter.default.publisher(for: .shortcutRecordingDidStart)
@@ -45,6 +33,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidBecomeActive(_ notification: Notification) {
         ScreenCapturePermission.handleApplicationDidBecomeActive()
+    }
+
+    static func observeShortcuts(settings: AppSettings, onChange: @escaping () -> Void) -> AnyCancellable {
+        let primary = Publishers.CombineLatest4(
+            settings.$normalShortcut, settings.$longCaptureShortcut,
+            settings.$windowShortcut, settings.$fullScreenShortcut
+        )
+        let secondary = Publishers.CombineLatest3(
+            settings.$previousAreaShortcut, settings.$presetAreaShortcut,
+            settings.$delayedFullScreenShortcut
+        )
+        return primary.combineLatest(secondary)
+            // @Published emits in willSet. Re-read settings only after the setter finishes.
+            .receive(on: DispatchQueue.main)
+            .sink { _ in onChange() }
     }
 
     private func applyApplicationIcon() {
