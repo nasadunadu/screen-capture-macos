@@ -25,6 +25,24 @@ struct ImageExportPlan: Equatable {
 final class ImageExporter {
     static let shared = ImageExporter()
 
+    private let settings: AppSettings
+    private let copyImage: @MainActor (CGImage) -> Void
+    private let applyEffects: @Sendable (CGImage, ExportOptions) -> CGImage
+    private let now: () -> Date
+    private var reservedDestinations: Set<URL> = []
+
+    init(
+        settings: AppSettings = .shared,
+        copyImage: @escaping @MainActor (CGImage) -> Void = { ImageExporter.copyProcessedImage($0) },
+        applyEffects: @escaping @Sendable (CGImage, ExportOptions) -> CGImage = { ImageEffects.apply(to: $0, options: $1) },
+        now: @escaping () -> Date = Date.init
+    ) {
+        self.settings = settings
+        self.copyImage = copyImage
+        self.applyEffects = applyEffects
+        self.now = now
+    }
+
     private let formatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
@@ -34,29 +52,35 @@ final class ImageExporter {
     }()
 
     func performDefaultAction(image: CGImage) async throws -> URL? {
-        let settings = AppSettings.shared
+        try Task.checkCancellation()
         let options = settings.exportOptions
         let plan = ImageExportPlan.defaultAction(
             settings.defaultAction,
             copyAfterSave: options.copyAfterSave
         )
         let destination = plan.writesFile ? nextAvailableURL(options: options) : nil
+        if let destination { reservedDestinations.insert(destination) }
+        defer { if let destination { reservedDestinations.remove(destination) } }
         let processed = try await process(image, options: options, destination: destination)
 
-        if plan.copiesToClipboard { copyProcessedImage(processed) }
+        try Task.checkCancellation()
+        if plan.copiesToClipboard { copyImage(processed) }
         playSoundIfNeeded(options: options)
         return destination
     }
 
     func saveAs(image: CGImage) async throws -> URL? {
-        let options = AppSettings.shared.exportOptions
+        try Task.checkCancellation()
+        let options = settings.exportOptions
         let panel = NSSavePanel()
         panel.allowedContentTypes = [options.format == .png ? .png : .jpeg]
         panel.nameFieldStringValue = defaultFilename(options: options)
         panel.directoryURL = options.directoryURL
         guard panel.runModal() == .OK, let url = panel.url else { return nil }
 
+        try Task.checkCancellation()
         _ = try await process(image, options: options, destination: url)
+        try Task.checkCancellation()
         playSoundIfNeeded(options: options)
         return url
     }
@@ -66,9 +90,12 @@ final class ImageExporter {
         options: ExportOptions,
         destination: URL?
     ) async throws -> CGImage {
-        try await Task.detached(priority: .userInitiated) {
+        let applyEffects = self.applyEffects
+        try Task.checkCancellation()
+        let worker = Task.detached(priority: .userInitiated) {
             try Task.checkCancellation()
-            let processed = ImageEffects.apply(to: image, options: options)
+            let processed = applyEffects(image, options)
+            try Task.checkCancellation()
             if let destination {
                 try FileManager.default.createDirectory(
                     at: destination.deletingLastPathComponent(),
@@ -79,22 +106,30 @@ final class ImageExporter {
                 try data.write(to: destination, options: .atomic)
             }
             return processed
-        }.value
+        }
+        // Detached work does not inherit its caller's cancellation automatically.
+        return try await withTaskCancellationHandler {
+            let result = try await worker.value
+            try Task.checkCancellation()
+            return result
+        } onCancel: {
+            worker.cancel()
+        }
     }
 
-    private func copyProcessedImage(_ image: CGImage) {
+    private static func copyProcessedImage(_ image: CGImage) {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         pasteboard.writeObjects([NSImage(cgImage: image, size: .zero)])
     }
 
     private func nextAvailableURL(options: ExportOptions) -> URL {
-        let baseName = "ScreenCapture_\(formatter.string(from: Date()))"
+        let baseName = "ScreenCapture_\(formatter.string(from: now()))"
         var url = options.directoryURL
             .appendingPathComponent(baseName)
             .appendingPathExtension(options.format.fileExtension)
         var suffix = 2
-        while FileManager.default.fileExists(atPath: url.path) {
+        while reservedDestinations.contains(url) || FileManager.default.fileExists(atPath: url.path) {
             url = options.directoryURL
                 .appendingPathComponent("\(baseName)_\(suffix)")
                 .appendingPathExtension(options.format.fileExtension)
@@ -104,7 +139,7 @@ final class ImageExporter {
     }
 
     private func defaultFilename(options: ExportOptions) -> String {
-        "ScreenCapture_\(formatter.string(from: Date())).\(options.format.fileExtension)"
+        "ScreenCapture_\(formatter.string(from: now())).\(options.format.fileExtension)"
     }
 
     nonisolated private static func encodedData(
