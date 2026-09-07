@@ -45,7 +45,7 @@ Screen Capture 专注两个高频任务：快速完成带标注的普通截图�
 
 从 [GitHub Releases](https://github.com/nasadunadu/screen-capture-macos/releases/latest) 下载已签名、公证的应用。打开 DMG，将 ScreenCapture 拖入“应用程序”即可；同时提供 ZIP 下载。普通用户无需安装 Xcode。
 
-`0.4.12` 是本个人独立维护的开源项目的稳定性修复版。各版本说明列出了验证结果及兼容性边界；自动化验证不代表所有受支持 Mac 都已完成实机验收。
+`0.4.13` 优化了选区交互：框选后用手形光标移动选区，明确选择工具后才开始绘制。各版本说明列出了验证结果及兼容性边界；自动化验证不代表所有受支持 Mac 都已完成实机验收。
 
 ## 环境要求
 
