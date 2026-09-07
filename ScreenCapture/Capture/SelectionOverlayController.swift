@@ -161,14 +161,16 @@ final class SelectionOverlayController: NSObject {
 }
 
 @MainActor
-private final class SelectionOverlayView: NSView {
+final class SelectionOverlayView: NSView {
     private enum DragOperation: Equatable {
         case creating
         case moving
         case resizing(SelectionHandle)
     }
 
-    private let snapshot: DisplaySnapshot
+    private let screen: NSScreen
+    private let sourceImage: CGImage
+    private let windows: [WindowCandidate]
     private let mode: CaptureMode
     private let document: AnnotationDocument
     private let backgroundImage: NSImage
@@ -188,11 +190,19 @@ private final class SelectionOverlayView: NSView {
 
     override var acceptsFirstResponder: Bool { true }
 
-    init(frame: CGRect, snapshot: DisplaySnapshot, mode: CaptureMode, document: AnnotationDocument) {
-        self.snapshot = snapshot
+    convenience init(frame: CGRect, snapshot: DisplaySnapshot, mode: CaptureMode, document: AnnotationDocument) {
+        self.init(frame: frame, image: snapshot.image, screen: snapshot.screen,
+                  windows: snapshot.windows, mode: mode, document: document)
+    }
+
+    init(frame: CGRect, image: CGImage, screen: NSScreen, windows: [WindowCandidate],
+         mode: CaptureMode, document: AnnotationDocument) {
+        self.screen = screen
+        self.sourceImage = image
+        self.windows = windows
         self.mode = mode
         self.document = document
-        backgroundImage = NSImage(cgImage: snapshot.image, size: frame.size)
+        backgroundImage = NSImage(cgImage: image, size: frame.size)
         super.init(frame: frame)
         addTrackingArea(NSTrackingArea(
             rect: bounds,
@@ -209,11 +219,16 @@ private final class SelectionOverlayView: NSView {
         guard mode != .window,
               selection.width >= 6,
               selection.height >= 6 else { return super.hitTest(point) }
+        if let toolbarHostingView, !toolbarHostingView.isHidden,
+           toolbarHostingView.frame.contains(point) { return super.hitTest(point) }
         if shadowControlFrame(for: selection).contains(point) {
             return self
         }
         if document.elements.isEmpty,
            SelectionGeometry.handle(at: point, in: selection) != nil {
+            return self
+        }
+        if document.tool == .select, document.elements.isEmpty, selection.contains(point) {
             return self
         }
         return super.hitTest(point)
@@ -253,9 +268,14 @@ private final class SelectionOverlayView: NSView {
     }
 
     override func mouseMoved(with event: NSEvent) {
-        guard mode == .window else { return }
         let point = convert(event.locationInWindow, from: nil)
-        hoveredWindow = snapshot.windows.first(where: { $0.localFrame.contains(point) })
+        guard mode == .window else {
+            if document.tool == .select, document.elements.isEmpty, selection.contains(point) {
+                NSCursor.openHand.set()
+            }
+            return
+        }
+        hoveredWindow = windows.first(where: { $0.localFrame.contains(point) })
         needsDisplay = true
     }
 
@@ -286,9 +306,11 @@ private final class SelectionOverlayView: NSView {
            let handle = SelectionGeometry.handle(at: point, in: selection) {
             dragOperation = .resizing(handle)
             annotationCanvas?.isHidden = true
-        } else if annotationCanvas == nil,
+        } else if document.tool == .select, document.elements.isEmpty,
                   selection.contains(point), selection.width >= 6, selection.height >= 6 {
             dragOperation = .moving
+            annotationCanvas?.isHidden = true
+            NSCursor.closedHand.set()
         } else {
             dragOperation = .creating
             annotationCanvas?.isHidden = true
@@ -310,6 +332,7 @@ private final class SelectionOverlayView: NSView {
                 height: abs(point.y - dragOrigin.y)
             ).intersection(bounds)
         case .moving:
+            NSCursor.closedHand.set()
             selection = SelectionGeometry.moved(
                 rect: selectionAtDragStart,
                 by: CGSize(width: point.x - dragOrigin.x, height: point.y - dragOrigin.y),
@@ -323,6 +346,7 @@ private final class SelectionOverlayView: NSView {
                 inside: bounds
             )
         }
+        if dragOperation != .creating { layoutToolbar(for: selection) }
         needsDisplay = true
     }
 
@@ -336,6 +360,7 @@ private final class SelectionOverlayView: NSView {
         if selection.width >= 6, selection.height >= 6 {
             installAnnotationCanvas()
             layoutToolbar(for: selection)
+            if document.tool == .select { NSCursor.openHand.set() }
         }
     }
 
@@ -367,7 +392,6 @@ private final class SelectionOverlayView: NSView {
 
     private func layoutToolbar(for localRect: CGRect) {
         guard mode != .window, let toolbarHostingView else { return }
-        let screen = snapshot.screen
         let globalRect = CGRect(
             x: screen.frame.minX + localRect.minX,
             y: screen.frame.minY + localRect.minY,
@@ -391,7 +415,7 @@ private final class SelectionOverlayView: NSView {
         guard fixedSelection.width >= 6,
               fixedSelection.height >= 6,
               let sourceImage = CaptureGeometry.crop(
-                image: snapshot.image,
+                image: self.sourceImage,
                 selection: fixedSelection,
                 canvasSize: bounds.size
               ) else { return }
@@ -419,7 +443,7 @@ private final class SelectionOverlayView: NSView {
         guard fixedSelection.width >= 6,
               fixedSelection.height >= 6,
               let image = CaptureGeometry.crop(
-                image: snapshot.image,
+                image: sourceImage,
                 selection: fixedSelection,
                 canvasSize: bounds.size
               ) else { return }
@@ -428,6 +452,7 @@ private final class SelectionOverlayView: NSView {
         let canvasFrame = fixedSelection.insetBy(dx: 2, dy: 2)
         guard canvasFrame.width >= 2, canvasFrame.height >= 2 else { return }
         let canvas = AnnotationCanvasView(image: image, frame: canvasFrame, document: document)
+        canvas.allowsRegionMovement = true
         canvas.onConfirm = { [weak self] in self?.onConfirm?() }
         canvas.onCancel = { [weak self] in self?.onCancel?() }
         canvas.onInteraction = { [weak self] in self?.keepToolbarVisible() }

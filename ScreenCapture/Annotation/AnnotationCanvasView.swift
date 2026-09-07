@@ -12,6 +12,7 @@ final class AnnotationCanvasView: NSView, NSTextFieldDelegate {
     var onConfirm: (() -> Void)?
     var onCancel: (() -> Void)?
     var onInteraction: (() -> Void)?
+    var allowsRegionMovement = false
 
     private var activeElementID: UUID?
     private var dragStart: CGPoint?
@@ -215,6 +216,8 @@ final class AnnotationCanvasView: NSView, NSTextFieldDelegate {
         guard isPointerInside else { return }
         if AnnotationPrecisionCursor.isUsed(for: tool) {
             AnnotationPrecisionCursor.cursor.set()
+        } else if allowsRegionMovement, tool == .select, document.elements.isEmpty {
+            NSCursor.openHand.set()
         } else {
             NSCursor.arrow.set()
         }

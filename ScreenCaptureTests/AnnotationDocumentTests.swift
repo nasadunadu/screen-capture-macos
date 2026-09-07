@@ -213,6 +213,7 @@ final class AnnotationDocumentTests: XCTestCase {
         ))
         let image = try XCTUnwrap(context.makeImage())
         let document = AnnotationDocument()
+        document.tool = .arrow
         let canvas = AnnotationCanvasView(
             image: image,
             frame: CGRect(x: 0, y: 0, width: 100, height: 100),
@@ -249,6 +250,7 @@ final class AnnotationDocumentTests: XCTestCase {
             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
         ))
         let document = AnnotationDocument()
+        document.tool = .arrow
         document.setOneShotColor(.systemBlue)
         let canvas = AnnotationCanvasView(
             image: try XCTUnwrap(context.makeImage()),
