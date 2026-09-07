@@ -181,7 +181,7 @@ struct AnnotationElement: Identifiable {
 
 @MainActor
 final class AnnotationDocument: ObservableObject {
-    @Published var tool: AnnotationTool = .arrow
+    @Published var tool: AnnotationTool = .select
     @Published var style = AnnotationStyle()
     @Published private(set) var oneShotColor: NSColor?
     @Published private(set) var elements: [AnnotationElement] = []

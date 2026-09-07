@@ -16,8 +16,10 @@ final class AnnotationToolbarTests: XCTestCase {
     }
 
     @MainActor
-    func testArrowIsActiveBeforeTheFirstAnnotationDrag() {
-        XCTAssertEqual(AnnotationDocument().tool, .arrow)
+    func testNoDrawingToolIsActiveBeforeExplicitSelection() {
+        let document = AnnotationDocument()
+        XCTAssertEqual(document.tool, .select)
+        XCTAssertFalse(AnnotationToolbarView.primaryTools.contains(document.tool))
     }
 
     @MainActor

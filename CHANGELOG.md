@@ -4,7 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-No user-visible changes yet.
+### Changed
+
+- Initial region selection now leaves drawing tools inactive. A hand cursor lets users move the crop before explicitly selecting an annotation tool; corner resizing and direct confirmation remain available.
 
 ## [0.4.12] - 2026-09-05
 
