@@ -44,7 +44,7 @@ Screen recording, audio recording, translation, OCR, accounts, telemetry, and cl
 
 Download the signed, notarized app from [GitHub Releases](https://github.com/nasadunadu/screen-capture-macos/releases/latest). Open the DMG and drag ScreenCapture into Applications; a ZIP download is also provided. No Xcode installation is needed to use the app.
 
-`0.4.12` is a stability patch for this independently maintained personal open-source project. See each release's notes for verification results and compatibility limits; automated validation does not replace testing on every supported Mac.
+`0.4.13` improves region selection: drag the crop with a hand cursor before explicitly choosing a drawing tool. See each release's notes for verification results and compatibility limits; automated validation does not replace testing on every supported Mac.
 
 ## Requirements
 
