@@ -59,8 +59,9 @@ enum AnnotationTool: String, CaseIterable, Identifiable {
 }
 
 struct AnnotationStyle {
+    static let defaultLineWidth: CGFloat = 3
     var color: NSColor = .systemRed
-    var lineWidth: CGFloat = 5
+    var lineWidth: CGFloat = AnnotationStyle.defaultLineWidth
     var opacity: CGFloat = 1
     var filled = false
     var spotlightEllipse = true
@@ -86,7 +87,7 @@ struct AnnotationArrowGeometry {
         let length = hypot(deltaX, deltaY)
         guard length > 0.5, length.isFinite else { return nil }
 
-        let width = min(18, max(1, lineWidth.isFinite ? lineWidth : 5))
+        let width = min(18, max(1, lineWidth.isFinite ? lineWidth : AnnotationStyle.defaultLineWidth))
         let unit = CGPoint(x: deltaX / length, y: deltaY / length)
         let perpendicular = CGPoint(x: -unit.y, y: unit.x)
         let relativeHeadLength = min(54, length * 0.15)
@@ -259,7 +260,7 @@ final class AnnotationDocument: ObservableObject {
     }
 
     func setLineWidth(_ width: CGFloat) {
-        let normalizedWidth = min(18, max(1, width.isFinite ? width : 5))
+        let normalizedWidth = min(18, max(1, width.isFinite ? width : AnnotationStyle.defaultLineWidth))
         style.lineWidth = normalizedWidth
         guard let selectedElementID,
               let index = elements.firstIndex(where: { $0.id == selectedElementID }),

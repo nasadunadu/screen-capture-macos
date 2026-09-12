@@ -4,7 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-No user-visible changes yet.
+### Changed
+
+- Reduced the default annotation stroke width from 5 to 3, including invalid-width fallbacks.
 
 ## [0.4.13] - 2026-09-07
 
