@@ -4,6 +4,15 @@ import XCTest
 
 @MainActor
 final class AnnotationDocumentTests: XCTestCase {
+    func testDefaultLineWidthAndInvalidInputFallbackAreThree() {
+        let document = AnnotationDocument()
+        XCTAssertEqual(AnnotationStyle().lineWidth, 3)
+        XCTAssertEqual(document.style.lineWidth, 3)
+        document.setLineWidth(8)
+        document.setLineWidth(.nan)
+        XCTAssertEqual(document.style.lineWidth, 3)
+    }
+
     func testUndoAndRedoRestoreDocumentMutations() {
         let document = AnnotationDocument()
         document.beginMutation()
@@ -128,7 +137,7 @@ final class AnnotationDocumentTests: XCTestCase {
         document.endLineWidthAdjustment()
         document.undo()
 
-        XCTAssertEqual(document.element(id: annotation.id)?.style.lineWidth, 5)
+        XCTAssertEqual(document.element(id: annotation.id)?.style.lineWidth, 3)
         document.undo()
         XCTAssertTrue(document.elements.isEmpty)
     }
@@ -142,7 +151,7 @@ final class AnnotationDocumentTests: XCTestCase {
         document.setLineWidth(100)
 
         XCTAssertEqual(document.style.lineWidth, 18)
-        XCTAssertEqual(document.element(id: annotation.id)?.style.lineWidth, 5)
+        XCTAssertEqual(document.element(id: annotation.id)?.style.lineWidth, 3)
     }
 
     func testArrowGeometryTapersFromTailIntoLargerHead() throws {
