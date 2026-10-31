@@ -269,6 +269,19 @@ struct SettingsView: View {
                         .foregroundStyle(.secondary)
                         .textSelection(.enabled)
                 }
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("开源主页与更新")
+                        Text("如果这款免费无广告工具帮到了你，欢迎在 GitHub 点亮 ⭐ Star 支持项目")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    if let repoURL = URL(string: "https://github.com/nasadunadu/screen-capture-macos") {
+                        Link("⭐ GitHub 点亮 Star", destination: repoURL)
+                            .buttonStyle(.borderedProminent)
+                    }
+                }
             }
         }
         .formStyle(.grouped)
