@@ -31,7 +31,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/images/hero-showcase.svg" width="100%" alt="Screen Capture v0.5.0 — Region Annotation &amp; Sticky-Aware Scrolling Long Capture">
+  <img src="docs/images/hero-showcase-en.svg" width="100%" alt="Screen Capture v0.5.0 — Region Annotation &amp; Sticky-Aware Scrolling Long Capture">
 </p>
 
 > 💡 **If Screen Capture saves you from bloated screenshot subscriptions or scrolling-stitch failures, please click ⭐ Star at the top-right to help more Mac users discover it!**
