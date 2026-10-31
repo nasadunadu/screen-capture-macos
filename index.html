@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Screen Capture for macOS — Free & Open-Source Native Screenshot & Scrolling Long-Capture App</title>
+<meta name="description" content="100% Free & Open-Source (Apache-2.0) native macOS screenshot and sticky-aware scrolling long-capture utility built with Swift and ScreenCaptureKit. Open-source alternative to iShot, Xnip, CleanShot X, and Shottr.">
+<meta name="keywords" content="macOS screenshot, scrolling screenshot mac, long screenshot mac, iShot alternative, Xnip alternative, Shottr alternative, CleanShot X open source alternative, ScreenCaptureKit, Mac免费长截图, Mac滚动截图">
+<link rel="canonical" href="https://nasadunadu.github.io/screen-capture-macos/">
+<link rel="alternate" hreflang="en" href="https://nasadunadu.github.io/screen-capture-macos/">
+<link rel="alternate" hreflang="zh-CN" href="https://nasadunadu.github.io/screen-capture-macos/zh/">
+<link rel="alternate" hreflang="x-default" href="https://nasadunadu.github.io/screen-capture-macos/">
+<meta property="og:title" content="Screen Capture for macOS — Free & Open-Source Native Screenshot & Scrolling Capture">
+<meta property="og:description" content="100% Free & Open-Source (Apache-2.0) native macOS screenshot and sticky-aware scrolling long-capture app. Apple Developer ID Notarized, zero telemetry.">
+<meta property="og:url" content="https://nasadunadu.github.io/screen-capture-macos/">
+<meta property="og:type" content="website">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Screen Capture for macOS",
+  "operatingSystem": "macOS 14.0+ (Apple Silicon)",
+  "applicationCategory": "UtilitiesApplication",
+  "softwareVersion": "0.5.0",
+  "license": "https://www.apache.org/licenses/LICENSE-2.0",
+  "url": "https://nasadunadu.github.io/screen-capture-macos/",
+  "downloadUrl": "https://github.com/nasadunadu/screen-capture-macos/releases/latest/download/ScreenCapture-0.5.0-macos-arm64.dmg",
+  "inLanguage": ["en", "zh-CN"],
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD"
+  },
+  "description": "A 100% free, open-source, Apple Developer ID notarized native macOS screenshot and scrolling long-capture utility built with Swift and ScreenCaptureKit. Open-source alternative to iShot, Xnip, CleanShot X, and Shottr."
+}
+</script>
+<style>
+  :root {
+    --paper: #F6F5F0;
+    --sand: #EAE6DB;
+    --ink: #17161B;
+    --graphite: #4A4852;
+    --muted: #787582;
+    --violet: #5A46E8;
+    --lilac: #ECE9FB;
+    --terracotta: #A44A2F;
+    --emerald: #1E7A4C;
+    --rule: #17161B;
+    --hairline: #D6D1C4;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Noto Serif SC", "Songti SC", sans-serif;
+    line-height: 1.75;
+    padding: 40px 24px 96px;
+  }
+  .container { max-width: 1080px; margin: 0 auto; }
+  .masthead {
+    display: flex; justify-content: space-between; align-items: center;
+    padding-bottom: 16px; border-bottom: 1px solid var(--rule); margin-bottom: 32px;
+    flex-wrap: wrap; gap: 12px;
+  }
+  .brand { font-weight: 700; font-size: 18px; letter-spacing: 0.02em; display: flex; align-items: center; gap: 12px; }
+  .nav-right { display: flex; align-items: center; gap: 12px; }
+  .pill {
+    background: var(--sand); padding: 5px 12px; border-radius: 999px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; font-weight: 600;
+  }
+  .lang-switch {
+    display: inline-flex; background: var(--sand); border-radius: 999px; padding: 3px; border: 1px solid var(--hairline);
+  }
+  .lang-btn {
+    border: none; background: transparent; padding: 4px 12px; border-radius: 999px;
+    font-size: 12px; font-weight: 700; cursor: pointer; color: var(--graphite); text-decoration: none;
+  }
+  .lang-btn.active {
+    background: var(--violet); color: #fff;
+  }
+  h1 {
+    font-size: clamp(30px, 4.2vw, 48px); line-height: 1.18; font-weight: 700;
+    margin-bottom: 16px; letter-spacing: -0.02em;
+  }
+  .subtitle {
+    font-size: 18px; color: var(--graphite); max-width: 880px; margin-bottom: 28px;
+    padding-left: 14px; border-left: 3px solid var(--violet);
+  }
+  .cta-row { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 32px; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px; padding: 13px 24px;
+    border-radius: 10px; font-weight: 600; font-size: 15px; text-decoration: none;
+    transition: transform 0.12s ease;
+  }
+  .btn:hover { transform: translateY(-1px); }
+  .btn-primary { background: var(--violet); color: #fff; }
+  .btn-secondary { background: var(--sand); color: var(--ink); border: 1px solid var(--hairline); }
+  .brew-box {
+    background: #17161B; color: #F6F5F0; padding: 18px 22px; border-radius: 10px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13.5px;
+    margin-bottom: 36px; overflow-x: auto; line-height: 1.65;
+  }
+  .hero-img { width: 100%; border-radius: 14px; border: 1px solid var(--hairline); margin-bottom: 48px; display: block; }
+  h2 { font-size: 26px; margin: 40px 0 16px; padding-bottom: 8px; border-bottom: 1px solid var(--hairline); }
+  table { width: 100%; border-collapse: collapse; margin: 20px 0 40px; font-size: 14.5px; }
+  th { background: var(--sand); text-align: left; padding: 12px 14px; border-bottom: 1.5px solid var(--rule); }
+  td { padding: 12px 14px; border-bottom: 1px solid var(--hairline); }
+  tr.highlight td { background: var(--lilac); font-weight: 600; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 20px; margin-bottom: 40px; }
+  .card { background: var(--sand); padding: 22px; border-radius: 10px; border-top: 3px solid var(--violet); }
+  .card h3 { font-size: 17px; margin-bottom: 8px; }
+  .card p { font-size: 14.5px; color: var(--graphite); }
+  footer { margin-top: 64px; padding-top: 24px; border-top: 1px solid var(--hairline); font-size: 13px; color: var(--muted); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+  [data-lang-block] { display: none; }
+  html[data-active-lang="en"] [data-lang-block="en"] { display: block; }
+  html[data-active-lang="zh"] [data-lang-block="zh"] { display: block; }
+</style>
+<script>
+  function setLang(lang) {
+    document.documentElement.setAttribute('data-active-lang', lang);
+    document.documentElement.setAttribute('lang', lang === 'zh' ? 'zh-CN' : 'en');
+    var btns = document.querySelectorAll('.lang-btn');
+    btns.forEach(function(b) {
+      b.classList.toggle('active', b.getAttribute('data-lang') === lang);
+    });
+    try { localStorage.setItem('sc_site_lang', lang); } catch(e) {}
+  }
+  (function() {
+    var defaultLang = 'en';
+    var saved = null;
+    try { saved = localStorage.getItem('sc_site_lang'); } catch(e) {}
+    var initial = saved || defaultLang;
+    if (!saved && window.location.pathname.indexOf('/zh') === -1) {
+      var nav = (navigator.language || '').toLowerCase();
+      if (nav.indexOf('zh') === 0) { initial = 'zh'; } else { initial = 'en'; }
+    }
+    document.documentElement.setAttribute('data-active-lang', initial);
+  })();
+</script>
+</head>
+<body>
+<div class="container">
+  <div class="masthead">
+    <div class="brand">Screen Capture for macOS</div>
+    <div class="nav-right">
+      <span class="pill">v0.5.0 · APPLE NOTARIZED · APACHE-2.0</span>
+      <div class="lang-switch" role="navigation" aria-label="Language Switcher">
+        <button type="button" class="lang-btn active" data-lang="en" onclick="setLang('en')">EN</button>
+        <button type="button" class="lang-btn " data-lang="zh" onclick="setLang('zh')">中文</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= ENGLISH VIEW ================= -->
+  <div data-lang-block="en">
+    <h1>100% Free & Open-Source Native Screenshot & Scrolling Long-Capture for macOS</h1>
+    <p class="subtitle">
+      Built with pure Swift, AppKit &amp; ScreenCaptureKit for Apple Silicon — featuring automatic sticky-header/footer deduplication, a compact 31×31pt vector annotation bar, Apple Developer ID notarization, and zero network permissions.
+    </p>
+
+    <div class="cta-row">
+      <a class="btn btn-primary" href="https://github.com/nasadunadu/screen-capture-macos/releases/latest/download/ScreenCapture-0.5.0-macos-arm64.dmg">⬇ Download Direct DMG (v0.5.0 Notarized)</a>
+      <a class="btn btn-secondary" href="https://github.com/nasadunadu/screen-capture-macos">⭐ Star on GitHub (Source Code)</a>
+    </div>
+
+    <div class="brew-box">
+      # Install via Homebrew Cask (macOS 14+ · Apple Silicon arm64)<br>
+      brew tap nasadunadu/tap https://github.com/nasadunadu/screen-capture-macos.git<br>
+      brew install --cask screencapture
+    </div>
+
+    <img class="hero-img" src="./hero-showcase-en.svg" alt="Screen Capture for macOS — Area Capture & Sticky-Aware Scrolling Long Capture">
+
+    <h2>Why Screen Capture vs. iShot / Xnip / CleanShot X / Shottr?</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Capability / Metric</th>
+          <th>Screen Capture (Ours)</th>
+          <th>iShot / Xnip</th>
+          <th>CleanShot X</th>
+          <th>Shottr</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="highlight">
+          <td>License &amp; Pricing</td>
+          <td>✅ 100% Free &amp; Open-Source (Apache-2.0)</td>
+          <td>❌ Paid Pro / Closed-Source</td>
+          <td>❌ $29+ Paid / Closed-Source</td>
+          <td>⚠️ Paid Tier ($12) / Closed-Source</td>
+        </tr>
+        <tr>
+          <td>Sticky-Header &amp; Footer Removal</td>
+          <td>✅ Auto gradient detection + dynamic tail trimming</td>
+          <td>⚠️ Repeated footer ghosting on chat/web windows</td>
+          <td>⚠️ Stalls on fixed bottom input bars</td>
+          <td>⚠️ Manual crop often required</td>
+        </tr>
+        <tr>
+          <td>Privacy &amp; Network Access</td>
+          <td>✅ Zero network permissions (100% local RAM)</td>
+          <td>❌ Cloud telemetry / account prompts</td>
+          <td>⚠️ Cloud upload &amp; license checks</td>
+          <td>⚠️ Closed binary</td>
+        </tr>
+        <tr>
+          <td>macOS 26/27 120Hz Stability</td>
+          <td>✅ Process-level SCContentFilter + deferred panel teardown</td>
+          <td>⚠️ Occasional capture-self flash</td>
+          <td>✅ Stable</td>
+          <td>✅ Stable</td>
+        </tr>
+        <tr>
+          <td>Apple Developer ID Notarized</td>
+          <td>✅ Signed &amp; Notarized</td>
+          <td>✅ App Store</td>
+          <td>✅ Signed</td>
+          <td>✅ Signed</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>Core Engineering Highlights</h2>
+    <div class="grid">
+      <div class="card">
+        <h3>Sticky-Aware Scrolling Long Capture (⌘5)</h3>
+        <p>Uses horizontal + vertical gradient energy to lock onto stationary top navigation bars and bottom floating footers, dynamically trimming newly detected fixed footers (<code>trimOutputTail</code>) with ±3px 1:1 Retina seam refinement and 2-step fast-scroll lookahead.</p>
+      </div>
+      <div class="card">
+        <h3>Compact Precision Vector Toolbar (⌘4)</h3>
+        <p>Removed bloated translation popups in favor of a pure <code>Canvas</code>-rendered 17×17pt vector icon strip inside a 31×31pt glassmorphic bar: rectangles, circles, tapered arrows, freehand pen, inline text, rounded-corner shadow export, and full undo/redo.</p>
+      </div>
+      <div class="card">
+        <h3>WindowServer 120Hz ProMotion Hardening</h3>
+        <p>Process-level <code>SCContentFilter(desktopIndependentWindow:excludingApplications:)</code> prevents self-capture feedback loops, while deferred overlay panel retirement eliminates macOS 26/27 <code>WindowServer</code> layer-host crashes.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= CHINESE VIEW ================= -->
+  <div data-lang-block="zh">
+    <h1>告别截图收费墙与长图重影：Mac 原生免费开源截图与滚动长截图工具</h1>
+    <p class="subtitle">
+      基于纯正 Swift、AppKit 与 ScreenCaptureKit 打造 · 支持固定顶栏/底栏（Sticky Header/Footer）自动去重拼接 · 极简 31×31pt 矢量标注栏 · Apple Developer ID 官方公证 · 零联网权限
+    </p>
+
+    <div class="cta-row">
+      <a class="btn btn-primary" href="https://github.com/nasadunadu/screen-capture-macos/releases/latest/download/ScreenCapture-0.5.0-macos-arm64.dmg">⬇ 立即下载 DMG 安装包 (v0.5.0 官方公证版)</a>
+      <a class="btn btn-secondary" href="https://github.com/nasadunadu/screen-capture-macos">⭐ GitHub 开源仓库 (点亮 Star)</a>
+    </div>
+
+    <div class="brew-box">
+      # 使用 Homebrew 一键安装（支持 macOS 14+ Apple Silicon M1/M2/M3/M4）<br>
+      brew tap nasadunadu/tap https://github.com/nasadunadu/screen-capture-macos.git<br>
+      brew install --cask screencapture
+    </div>
+
+    <img class="hero-img" src="./hero-showcase.svg" alt="Screen Capture for macOS 区域标注与长截图双工作流展示">
+
+    <h2>为什么选择 Screen Capture？（主流 Mac 截图工具横向对比）</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>对比维度</th>
+          <th>Screen Capture (本项目)</th>
+          <th>iShot / Xnip</th>
+          <th>CleanShot X</th>
+          <th>Shottr</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="highlight">
+          <td>开源协议与价格</td>
+          <td>✅ 100% 免费开源 (Apache-2.0)</td>
+          <td>❌ 高级功能/去水印需付费订阅</td>
+          <td>❌ 买断 $29+ / 闭源</td>
+          <td>⚠️ 付费版 $12 / 闭源</td>
+        </tr>
+        <tr>
+          <td>长截图固定顶栏/底栏去重</td>
+          <td>✅ 梯度能量检测 + 动态尾部修剪，无重影断层</td>
+          <td>⚠️ 聊天窗/带底栏网页易出现重复横条</td>
+          <td>⚠️ 遇到吸底输入框易中断拼接</td>
+          <td>⚠️ 复杂吸顶网页需手动裁剪</td>
+        </tr>
+        <tr>
+          <td>隐私安全与联网权限</td>
+          <td>✅ 零联网权限，100% 本地内存处理</td>
+          <td>❌ 闭源商业包，含联网激活统计</td>
+          <td>⚠️ 含云端上传与授权校验守护进程</td>
+          <td>⚠️ 闭源二进制分发</td>
+        </tr>
+        <tr>
+          <td>macOS 26/27 120Hz 稳定性</td>
+          <td>✅ 进程级窗口排除 + 跨刷新周期延迟回收</td>
+          <td>⚠️ 高频连按偶发残影</td>
+          <td>✅ 稳定</td>
+          <td>✅ 稳定</td>
+        </tr>
+        <tr>
+          <td>Apple 官方公证 (Notarized)</td>
+          <td>✅ Developer ID 签名与公证，双击即用</td>
+          <td>✅ App Store 签名</td>
+          <td>✅ 官方签名</td>
+          <td>✅ 官方签名</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>三大核心技术亮点</h2>
+    <div class="grid">
+      <div class="card">
+        <h3>智能滚动长截图 (Command + 5)</h3>
+        <p>采用水平/垂直梯度能量分析自动识别静止顶栏与底栏，动态修剪新检出的固定底栏（<code>trimOutputTail</code>），配合 ±3px 原生 Retina 1:1 接缝精修与 2 步快滚前瞻对齐，彻底解决网页与聊天记录长图重影。</p>
+      </div>
+      <div class="card">
+        <h3>极简矢量标注工具栏 (Command + 4)</h3>
+        <p>剔除臃肿的联网翻译弹窗，采用纯 <code>Canvas</code> 矢量绘制 17×17pt 图标与 31×31pt 紧凑毛玻璃黑框，内置矩形、圆环、流线型渐变箭头、画笔、文字输入、四角紫色标尺微调与圆角阴影导出。</p>
+      </div>
+      <div class="card">
+        <h3>macOS 26/27 ProMotion 120Hz 深度加固</h3>
+        <p>采用进程级 <code>SCContentFilter</code> 将自身叠加层彻底排除在采集流之外，配合跨显示刷新周期的延迟窗口退役机制，高频连续截图永不触发 <code>WindowServer</code> 崩溃。</p>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <span>Screen Capture for macOS v0.5.0 · Apache-2.0 Open Source License</span>
+    <span><a href="https://nasadunadu.github.io/screen-capture-macos/" style="color:var(--violet);">English</a> · <a href="https://nasadunadu.github.io/screen-capture-macos/zh/" style="color:var(--violet);">简体中文</a> · <a href="https://nasadunadu.github.io/screen-capture-macos/llms.txt" style="color:var(--violet);">llms.txt</a> · <a href="https://github.com/nasadunadu/screen-capture-macos" style="color:var(--violet);">GitHub</a></span>
+  </footer>
+</div>
+</body>
+</html>

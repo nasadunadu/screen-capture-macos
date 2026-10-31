@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://nasadunadu.github.io/screen-capture-macos/sitemap.xml
