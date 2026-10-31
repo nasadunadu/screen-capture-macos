@@ -31,9 +31,9 @@ Screen Capture 专注两个高频任务：快速完成带标注的普通截图�
 - 针对快速滚动、固定顶部内容、低信息画面的拼接容错
 - 长图内存上限、确定性拼接，以及全流程 `Escape` 取消
 - 菜单栏入口、可修改全局快捷键和无打扰启动
-- 所有截图像素只在本机处理
+- 纯本地处理，截图像素不离开本机
 
-本项目明确不包含录屏、录音、翻译、OCR、账号、遥测和云上传。
+本项目不包含录屏、录音、OCR、翻译、账号、遥测和云端上传。
 
 <p align="center">
   <img src="docs/images/settings.png" width="880" alt="原生设置页面与可编辑快捷键">
@@ -45,12 +45,13 @@ Screen Capture 专注两个高频任务：快速完成带标注的普通截图�
 
 从 [GitHub Releases](https://github.com/nasadunadu/screen-capture-macos/releases/latest) 下载已签名、公证的应用。打开 DMG，将 ScreenCapture 拖入“应用程序”即可；同时提供 ZIP 下载。普通用户无需安装 Xcode。
 
-`0.4.13` 优化了选区交互：框选后用手形光标移动选区，明确选择工具后才开始绘制。各版本说明列出了验证结果及兼容性边界；自动化验证不代表所有受支持 Mac 都已完成实机验收。
+`0.5.0` 重点加固了 macOS 26/27 下的 `WindowServer` 窗口生命周期稳定性，重构了滚动长截图的固定顶底栏遮罩与像素级接缝对齐算法（消除卡死与重复条带），换装了紧凑型 AI 时代精细矢量标注工具条，并转为纯原生 Apple Silicon (`arm64`) 构建。各版本说明列出了验证结果及兼容性边界；自动化验证不代表所有受支持 Mac 都已完成实机验收。
 
 ## 环境要求
 
+- `v0.5.0` 及后续版本**仅支持 Apple Silicon（M 系列）Mac，不支持 Intel Mac**；继续兼容 **macOS 14–26 和 macOS 27**。Intel 用户可使用历史 [v0.4.14](https://github.com/nasadunadu/screen-capture-macos/releases/tag/v0.4.14)，此次迁移不修改旧发行包。
 - macOS 14 或更高版本
-- 开发时使用 Xcode 26 或更高版本
+- 开发时使用 Xcode 27 或更高版本
 - 第一次截图时允许“屏幕与系统音频录制”权限
 
 ## 构建与运行

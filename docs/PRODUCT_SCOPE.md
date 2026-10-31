@@ -28,8 +28,7 @@ Replace the owner's daily iShot screenshot workflow with a private, native macOS
 
 - Screen recording
 - Audio recording
-- Screenshot translation
-- OCR
+- OCR and cloud translation
 - Cloud upload or account system
 - Automatic web-page DOM extraction
 

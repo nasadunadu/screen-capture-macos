@@ -57,7 +57,7 @@ xcodebuild \
   CODE_SIGNING_ALLOWED=NO \
   analyze
 
-echo "==> Universal Release build"
+echo "==> Apple Silicon Release build"
 xcodebuild \
   -project ScreenCapture.xcodeproj \
   -scheme ScreenCapture \
@@ -66,7 +66,7 @@ xcodebuild \
   -derivedDataPath "$DERIVED_DATA_PATH" \
   CODE_SIGNING_ALLOWED=NO \
   ONLY_ACTIVE_ARCH=NO \
-  ARCHS='arm64 x86_64' \
+  ARCHS=arm64 \
   build
 
 APP="$DERIVED_DATA_PATH/Build/Products/Release/ScreenCapture.app"
@@ -76,7 +76,9 @@ RELEASE_BUNDLE_ID=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP
 RELEASE_DISPLAY_NAME=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleDisplayName' "$APP/Contents/Info.plist")
 
 [[ " $ARCHITECTURES " == *" arm64 "* ]] || { echo "Missing arm64 slice" >&2; exit 1; }
-[[ " $ARCHITECTURES " == *" x86_64 "* ]] || { echo "Missing x86_64 slice" >&2; exit 1; }
+[[ "$ARCHITECTURES" == "arm64" ]] || { echo "Only arm64 is supported" >&2; exit 1; }
+MINIMUM_SYSTEM=$(/usr/libexec/PlistBuddy -c 'Print :LSMinimumSystemVersion' "$APP/Contents/Info.plist")
+[[ "$MINIMUM_SYSTEM" == "14.0" ]] || { echo "Expected macOS 14.0 minimum" >&2; exit 1; }
 [[ "$RELEASE_BUNDLE_ID" == "com.nasa.ScreenCapture" ]] || {
   echo "Unexpected Release bundle identifier: $RELEASE_BUNDLE_ID" >&2
   exit 1
@@ -95,8 +97,8 @@ trap 'rm -rf "$PACKAGE_SMOKE_DIR"' EXIT
 VERSION=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Contents/Info.plist")
 (
   cd "$PACKAGE_SMOKE_DIR"
-  shasum -a 256 -c "ScreenCapture-$VERSION-macos-universal.dmg.sha256"
-  shasum -a 256 -c "ScreenCapture-$VERSION-macos-universal.zip.sha256"
+  shasum -a 256 -c "ScreenCapture-$VERSION-macos-arm64.dmg.sha256"
+  shasum -a 256 -c "ScreenCapture-$VERSION-macos-arm64.zip.sha256"
 )
 
 echo "Validated ScreenCapture.app ($ARCHITECTURES)"

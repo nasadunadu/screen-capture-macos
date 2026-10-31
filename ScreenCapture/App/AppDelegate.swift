@@ -9,6 +9,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var isRecordingShortcut = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        ProcessInfo.processInfo.disableAutomaticTermination("Global capture shortcut listener")
+        NSWindow.allowsAutomaticWindowTabbing = false
         NSApp.setActivationPolicy(.regular)
         applyApplicationIcon()
         let manager = HotKeyManager()

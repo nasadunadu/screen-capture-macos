@@ -123,8 +123,17 @@ final class ScreenCaptureService {
         }
         let ownBundleID = Bundle.main.bundleIdentifier
         let ownApplication = content.applications.first { $0.bundleIdentifier == ownBundleID }
-        let ownWindows = content.windows.filter { $0.owningApplication?.bundleIdentifier == ownBundleID }
-        let filter = SCContentFilter(display: display, excludingWindows: ownWindows)
+        let filter: SCContentFilter
+        if let ownApplication {
+            filter = SCContentFilter(
+                display: display,
+                excludingApplications: [ownApplication],
+                exceptingWindows: []
+            )
+        } else {
+            let ownWindows = content.windows.filter { $0.owningApplication?.bundleIdentifier == ownBundleID }
+            filter = SCContentFilter(display: display, excludingWindows: ownWindows)
+        }
         let configuration = SCStreamConfiguration()
         let scale = nativeScale(for: screen, displayID: displayID)
         let pixelSize = CaptureGeometry.nativePixelSize(logicalSize: screen.frame.size, scale: scale)

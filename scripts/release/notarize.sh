@@ -33,7 +33,7 @@ security find-identity -v -p codesigning | grep -Fq "\"$SIGNING_AUTHORITY\"" || 
 codesign --verify --deep --strict --verbose=2 "$APP"
 
 VERSION=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Contents/Info.plist")
-BASENAME="ScreenCapture-$VERSION-macos-universal"
+BASENAME="ScreenCapture-$VERSION-macos-arm64"
 FINAL_DMG="$OUTPUT_DIR/$BASENAME.dmg"
 FINAL_ZIP="$OUTPUT_DIR/$BASENAME.zip"
 FINAL_DMG_CHECKSUM="$FINAL_DMG.sha256"
@@ -58,7 +58,7 @@ fi
 BIN="$APP/Contents/MacOS/ScreenCapture"
 ARCHITECTURES=$(lipo -archs "$BIN")
 [[ " $ARCHITECTURES " == *" arm64 "* ]] || { echo "Missing arm64 slice" >&2; exit 1; }
-[[ " $ARCHITECTURES " == *" x86_64 "* ]] || { echo "Missing x86_64 slice" >&2; exit 1; }
+[[ "$ARCHITECTURES" == "arm64" ]] || { echo "Only arm64 is supported" >&2; exit 1; }
 
 UPLOAD_ZIP="$TEMP_DIR/ScreenCapture-notary-upload.zip"
 ditto -c -k --keepParent "$APP" "$UPLOAD_ZIP"

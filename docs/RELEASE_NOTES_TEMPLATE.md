@@ -13,7 +13,7 @@
 
 - Commit: `RELEASE_COMMIT`
 - Apple notarization: accepted and stapled
-- Architectures: `arm64`, `x86_64`
+- Architecture: `arm64` only; Intel Macs are unsupported; macOS 14–26 compatibility is retained
 - DMG SHA-256: `DMG_CHECKSUM`
 - ZIP SHA-256: `ZIP_CHECKSUM`
 - Automated tests: passed

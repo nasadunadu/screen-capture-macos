@@ -72,26 +72,56 @@ enum ScrollStitcher {
         let nextSample = GrayFrame(next)
         guard previousSample.detailScore >= 0.0005,
               nextSample.detailScore >= 0.0005 else { return nil }
+        let stationary = stationaryEdgeInsets(previous: previousSample, next: nextSample)
         let ordinaryMatch = bestOverlap(previous: previousSample, next: nextSample)
+        let minScrollRows = max(6, previousSample.height / 24)
+        let ordinaryPinnedNearZeroScroll = ordinaryMatch.rows >= previousSample.height - minScrollRows
+        let shouldCheckEdgeAware = ordinaryMatch.score >= 0.045
+            || ordinaryPinnedNearZeroScroll
+            || stationary.leading >= 4
+            || stationary.trailing >= 4
+
         var selectedEdgeMatch: EdgeAwareOverlap?
         let match: (rows: Int, score: Double)
-        if ordinaryMatch.score >= 0.16,
+        if shouldCheckEdgeAware,
            let insetMatch = fixedEdgeAwareOverlapDetails(
                previous: previousSample,
-               next: nextSample
-           ),
-           insetMatch.score + 0.008 < ordinaryMatch.score {
-            selectedEdgeMatch = insetMatch
-            match = (insetMatch.rows, insetMatch.score)
+               next: nextSample,
+               detectedLeading: stationary.leading,
+               detectedTrailing: stationary.trailing
+           ) {
+            let insetFoundRealScroll = insetMatch.rows <= previousSample.height - minScrollRows
+            let beatsOrdinaryScore = insetMatch.score + 0.006 < ordinaryMatch.score
+            let unpinsZeroScroll = ordinaryPinnedNearZeroScroll
+                && insetFoundRealScroll
+                && insetMatch.score < 0.16
+            let resolvesDetectedStationaryEdge = (stationary.leading >= 6 || stationary.trailing >= 6)
+                && insetFoundRealScroll
+                && insetMatch.score < min(0.16, ordinaryMatch.score + 0.015)
+            if beatsOrdinaryScore || unpinsZeroScroll || resolvesDetectedStationaryEdge {
+                selectedEdgeMatch = insetMatch
+                match = (insetMatch.rows, insetMatch.score)
+            } else {
+                match = ordinaryMatch
+            }
         } else {
             match = ordinaryMatch
         }
+        let leadingSampleTrim = selectedEdgeMatch?.leadingInset ?? 0
+        let trailingSampleTrim = selectedEdgeMatch?.trailingInset ?? 0
         if match.score < 0.16 {
-            return pixelAlignment(
+            let coarse = pixelAlignment(
                 match: match,
                 frameHeight: previous.height,
                 sampleHeight: nextSample.height,
-                trailingSampleTrim: selectedEdgeMatch?.trailingInset ?? 0
+                trailingSampleTrim: trailingSampleTrim
+            )
+            return refineNativePixelAlignment(
+                coarse,
+                previous: previous,
+                next: next,
+                sampleHeight: nextSample.height,
+                leadingSampleTrim: leadingSampleTrim
             )
         }
         if let vision = visionAlignment(previous: previous, next: next) {
@@ -104,24 +134,40 @@ enum ScrollStitcher {
             let visionScore = overlapScore(
                 previous: previousSample,
                 next: nextSample,
-                overlap: sampledOverlap
+                overlap: sampledOverlap,
+                leadingInset: leadingSampleTrim,
+                trailingInset: trailingSampleTrim
             )
             if visionScore < 0.26 {
-                return applyingTrailingTrim(
-                    selectedEdgeMatch?.trailingInset ?? 0,
+                let aligned = applyingTrailingTrim(
+                    trailingSampleTrim,
                     sampleHeight: nextSample.height,
                     to: vision,
                     frameHeight: previous.height
+                )
+                return refineNativePixelAlignment(
+                    aligned,
+                    previous: previous,
+                    next: next,
+                    sampleHeight: nextSample.height,
+                    leadingSampleTrim: leadingSampleTrim
                 )
             }
         }
 
         guard match.score < 0.20 else { return nil }
-        return pixelAlignment(
+        let fallback = pixelAlignment(
             match: match,
             frameHeight: previous.height,
             sampleHeight: nextSample.height,
-            trailingSampleTrim: selectedEdgeMatch?.trailingInset ?? 0
+            trailingSampleTrim: trailingSampleTrim
+        )
+        return refineNativePixelAlignment(
+            fallback,
+            previous: previous,
+            next: next,
+            sampleHeight: nextSample.height,
+            leadingSampleTrim: leadingSampleTrim
         )
     }
 
@@ -488,15 +534,114 @@ enum ScrollStitcher {
         previous: GrayFrame,
         next: GrayFrame
     ) -> (rows: Int, score: Double)? {
-        guard let match = fixedEdgeAwareOverlapDetails(previous: previous, next: next) else {
+        let stationary = stationaryEdgeInsets(previous: previous, next: next)
+        guard let match = fixedEdgeAwareOverlapDetails(
+            previous: previous,
+            next: next,
+            detectedLeading: stationary.leading,
+            detectedTrailing: stationary.trailing
+        ) else {
             return nil
         }
         return (match.rows, match.score)
     }
 
-    private static func fixedEdgeAwareOverlapDetails(
+    private static func stationaryEdgeInsets(
         previous: GrayFrame,
         next: GrayFrame
+    ) -> (leading: Int, trailing: Int) {
+        let width = min(previous.width, next.width)
+        let height = min(previous.height, next.height)
+        guard width > 4, height >= 48 else { return (0, 0) }
+
+        var rowDiff = [Double](repeating: 0, count: height)
+        var rowStructure = [Double](repeating: 0, count: height)
+        let span = Double(max(1, width - 1) * 255)
+
+        for y in 0..<height {
+            let prevY = max(0, y - 1)
+            let nextRowY = min(height - 1, y + 1)
+            var diffSum = 0
+            var structureSum = 0
+            for x in 1..<width {
+                let a = Int(previous[x, y])
+                let b = Int(next[x, y])
+                diffSum += abs(a - b)
+                let hEdgeA = abs(a - Int(previous[x - 1, y]))
+                let hEdgeB = abs(b - Int(next[x - 1, y]))
+                let vEdgeA = max(abs(a - Int(previous[x, prevY])), abs(a - Int(previous[x, nextRowY])))
+                let vEdgeB = max(abs(b - Int(next[x, prevY])), abs(b - Int(next[x, nextRowY])))
+                structureSum += max(max(hEdgeA, hEdgeB), max(vEdgeA, vEdgeB))
+            }
+            rowDiff[y] = Double(diffSum) / span
+            rowStructure[y] = Double(structureSum) / span
+        }
+
+        let midStart = height / 4
+        let midEnd = max(midStart + 1, height * 3 / 4)
+        var movingCenterDiff = 0.0
+        var movingCenterCount = 0
+        for y in midStart..<midEnd where rowStructure[y] >= 0.006 || rowDiff[y] >= 0.015 {
+            movingCenterDiff += rowDiff[y]
+            movingCenterCount += 1
+        }
+        guard movingCenterCount > 0,
+              movingCenterDiff / Double(movingCenterCount) >= 0.010 else {
+            return (0, 0)
+        }
+
+        let maxEdgeRows = height / 3
+
+        var rawLeading = 0
+        var leadingToleranceBudget = 2
+        for y in 0..<maxEdgeRows {
+            if rowDiff[y] <= 0.014 {
+                rawLeading = y + 1
+            } else if rowDiff[y] <= 0.032, leadingToleranceBudget > 0 {
+                leadingToleranceBudget -= 1
+                rawLeading = y + 1
+            } else {
+                break
+            }
+        }
+        while rawLeading > 0, rowStructure[rawLeading - 1] < 0.008 {
+            rawLeading -= 1
+        }
+        let leadingStructuredRows = (0..<rawLeading).filter { rowStructure[$0] >= 0.008 }.count
+        let leading = (rawLeading >= 6 && leadingStructuredRows >= max(2, rawLeading / 10))
+            ? rawLeading
+            : 0
+
+        var rawTrailing = 0
+        var trailingToleranceBudget = 2
+        for offset in 0..<maxEdgeRows {
+            let y = height - 1 - offset
+            if rowDiff[y] <= 0.014 {
+                rawTrailing = offset + 1
+            } else if rowDiff[y] <= 0.032, trailingToleranceBudget > 0 {
+                trailingToleranceBudget -= 1
+                rawTrailing = offset + 1
+            } else {
+                break
+            }
+        }
+        while rawTrailing > 0, rowStructure[height - rawTrailing] < 0.008 {
+            rawTrailing -= 1
+        }
+        let trailingStart = height - rawTrailing
+        let trailingStructuredRows = (trailingStart..<height).filter { rowStructure[$0] >= 0.008 }.count
+        let trailing = (rawTrailing >= 6 && trailingStructuredRows >= max(2, rawTrailing / 10))
+            ? rawTrailing
+            : 0
+
+        return (leading, trailing)
+    }
+
+    private static func fixedEdgeAwareOverlapDetails(
+        previous: GrayFrame,
+        next: GrayFrame,
+        detectedLeading: Int = 0,
+        detectedTrailing: Int = 0
     ) -> EdgeAwareOverlap? {
         let height = min(previous.height, next.height)
         let minOverlap = max(12, height / 16)
@@ -512,25 +657,49 @@ enum ScrollStitcher {
             through: maximumInset,
             by: insetStep
         )
-        let pairedMaximumInset = min(maximumInset, max(0, (maxOverlap - minimumComparedRows) / 2))
-        let pairedInsets = pairedMaximumInset >= insetStep
-            ? Array(stride(from: insetStep, through: pairedMaximumInset, by: insetStep))
-            : []
-        var profiles = oneSidedInsets.flatMap { inset in
-            [(leading: inset, trailing: 0), (leading: 0, trailing: inset)]
+        let clampedLeading = min(maximumInset, max(0, detectedLeading))
+        let clampedTrailing = min(maximumInset, max(0, detectedTrailing))
+
+        var profiles: [(leading: Int, trailing: Int)] = []
+        if clampedLeading >= 4, clampedTrailing >= 4,
+           clampedLeading + clampedTrailing <= maxOverlap - minimumComparedRows {
+            profiles.append((leading: clampedLeading, trailing: clampedTrailing))
+        } else if clampedTrailing >= 4 {
+            profiles.append((leading: 0, trailing: clampedTrailing))
+            for leading in oneSidedInsets where leading + clampedTrailing <= maxOverlap - minimumComparedRows {
+                profiles.append((leading: leading, trailing: clampedTrailing))
+            }
+        } else if clampedLeading >= 4 {
+            profiles.append((leading: clampedLeading, trailing: 0))
+            for leading in oneSidedInsets where abs(leading - clampedLeading) >= insetStep {
+                profiles.append((leading: leading, trailing: 0))
+            }
+        } else {
+            profiles.append(contentsOf: oneSidedInsets.map { (leading: $0, trailing: 0) })
         }
-        // Many modern apps keep both a navigation/header area and a composer or
-        // action bar fixed. Compare only their moving centre instead of letting
-        // two stationary edges defeat the scroll match.
-        profiles.append(contentsOf: pairedInsets.map { (leading: $0, trailing: $0) })
+
+        func profilePenalty(_ profile: (leading: Int, trailing: Int)) -> Double {
+            let unverifiedLeading = max(0, profile.leading - clampedLeading)
+            let unverifiedTrailing = max(0, profile.trailing - clampedTrailing)
+            let verifiedInset = profile.leading + profile.trailing - unverifiedLeading - unverifiedTrailing
+            let uncoveredStationary = max(0, clampedLeading - profile.leading)
+                + max(0, clampedTrailing - profile.trailing)
+            return Double(unverifiedLeading + unverifiedTrailing) / Double(height) * 0.008
+                + Double(verifiedInset) / Double(height) * 0.0015
+                + Double(uncoveredStationary) / Double(height) * 0.006
+        }
 
         var bestRows = minOverlap
         var bestProfile = (leading: 0, trailing: 0)
         var bestScore = Double.greatestFiniteMagnitude
 
-        for profile in profiles {
+        for (profileIndex, profile) in profiles.enumerated() {
             let totalInset = profile.leading + profile.trailing
             let firstOverlap = max(minOverlap, totalInset + minimumComparedRows)
+            let insetPenalty = profilePenalty(profile)
+            let step = (profileIndex == 0 && (clampedLeading >= 4 || clampedTrailing >= 4))
+                ? 1
+                : overlapStep
             var overlap = firstOverlap
             while overlap <= maxOverlap {
                 let raw = overlapScore(
@@ -541,19 +710,19 @@ enum ScrollStitcher {
                     trailingInset: profile.trailing
                 )
                 let scrollPreference = Double(height - overlap) / Double(height) * 0.003
-                let insetPenalty = Double(totalInset) / Double(height) * 0.008
                 let score = raw + scrollPreference + insetPenalty
                 if score < bestScore {
                     bestScore = score
                     bestRows = overlap
                     bestProfile = profile
                 }
-                overlap += overlapStep
+                overlap += step
             }
         }
 
         guard bestScore.isFinite else { return nil }
         let bestTotalInset = bestProfile.leading + bestProfile.trailing
+        let bestInsetPenalty = profilePenalty(bestProfile)
         let refinedOverlaps = max(
             max(minOverlap, bestTotalInset + minimumComparedRows),
             bestRows - overlapStep
@@ -567,8 +736,7 @@ enum ScrollStitcher {
                 trailingInset: bestProfile.trailing
             )
             let scrollPreference = Double(height - candidateOverlap) / Double(height) * 0.003
-            let insetPenalty = Double(bestTotalInset) / Double(height) * 0.008
-            let score = raw + scrollPreference + insetPenalty
+            let score = raw + scrollPreference + bestInsetPenalty
             if score < bestScore {
                 bestScore = score
                 bestRows = candidateOverlap
@@ -579,6 +747,70 @@ enum ScrollStitcher {
             score: bestScore,
             leadingInset: bestProfile.leading,
             trailingInset: bestProfile.trailing
+        )
+    }
+
+    private static func refineNativePixelAlignment(
+        _ alignment: FrameAlignment,
+        previous: CGImage,
+        next: CGImage,
+        sampleHeight: Int,
+        leadingSampleTrim: Int
+    ) -> FrameAlignment {
+        let frameHeight = min(previous.height, next.height)
+        guard frameHeight > sampleHeight,
+              sampleHeight > 0,
+              alignment.overlap > 0,
+              alignment.overlap < frameHeight else {
+            return alignment
+        }
+
+        let scale = Double(frameHeight) / Double(sampleHeight)
+        let searchRadius = max(3, Int(ceil(scale)) + 2)
+        let stripWidth = min(72, min(previous.width, next.width))
+        guard stripWidth > 4 else { return alignment }
+
+        let previousStrip = GrayFrame(previous, targetWidth: stripWidth, targetHeight: frameHeight)
+        let nextStrip = GrayFrame(next, targetWidth: stripWidth, targetHeight: frameHeight)
+        let leadingNativeInset = scaledTrim(
+            leadingSampleTrim,
+            sampleHeight: sampleHeight,
+            frameHeight: frameHeight
+        )
+        let trailingNativeInset = alignment.trailingTrim
+        let minOverlap = max(12, leadingNativeInset + trailingNativeInset + 16)
+        let maxOverlap = frameHeight - 1
+        guard minOverlap <= maxOverlap else { return alignment }
+
+        let lower = max(minOverlap, alignment.overlap - searchRadius)
+        let upper = min(maxOverlap, alignment.overlap + searchRadius)
+        guard lower <= upper else { return alignment }
+
+        var bestOverlap = alignment.overlap
+        var bestScore = Double.greatestFiniteMagnitude
+        for candidateOverlap in lower...upper {
+            let raw = overlapScore(
+                previous: previousStrip,
+                next: nextStrip,
+                overlap: candidateOverlap,
+                leadingInset: leadingNativeInset,
+                trailingInset: trailingNativeInset
+            )
+            let distancePenalty = Double(abs(candidateOverlap - alignment.overlap)) * 0.00015
+            let score = raw + distancePenalty
+            if score < bestScore {
+                bestScore = score
+                bestOverlap = candidateOverlap
+            }
+        }
+
+        guard bestScore < 0.22 else { return alignment }
+        return FrameAlignment(
+            overlap: bestOverlap,
+            scrollDelta: frameHeight - bestOverlap,
+            trailingTrim: alignment.trailingTrim,
+            confidence: alignment.confidence,
+            source: alignment.source
         )
     }
 
@@ -599,7 +831,7 @@ enum ScrollStitcher {
 
         let comparedRows = overlap - leadingInset - trailingInset
         let comparisonEnd = overlap - trailingInset
-        let yStep = max(1, comparedRows / 56)
+        let yStep = max(1, comparedRows / 64)
         var pixelDifference = 0.0
         var edgeDifference = 0.0
         var edgeEnergy = 0.0
@@ -608,8 +840,8 @@ enum ScrollStitcher {
         while y < comparisonEnd {
             let previousY = previous.height - overlap + y
             let nextY = y
-            var x = 2
-            while x < width - 2 {
+            var x = 1
+            while x < width - 1 {
                 let a = Int(previous[x, previousY])
                 let b = Int(next[x, nextY])
                 pixelDifference += Double(abs(a - b)) / 255.0
@@ -625,7 +857,7 @@ enum ScrollStitcher {
                     edgeEnergy += Double(max(verticalA, verticalB))
                 }
                 pixelCount += 1
-                x += 3
+                x += 2
             }
             y += yStep
         }
@@ -692,25 +924,25 @@ struct GrayFrame {
         self.bytes = bytes
     }
 
-    init(_ image: CGImage) {
-        let targetWidth = min(56, image.width)
-        let targetHeight = min(520, image.height)
-        var storage = [UInt8](repeating: 0, count: targetWidth * targetHeight)
+    init(_ image: CGImage, targetWidth: Int? = nil, targetHeight: Int? = nil) {
+        let resolvedWidth = min(targetWidth ?? 84, image.width)
+        let resolvedHeight = min(targetHeight ?? 520, image.height)
+        var storage = [UInt8](repeating: 0, count: resolvedWidth * resolvedHeight)
         storage.withUnsafeMutableBytes { raw in
             guard let context = CGContext(
                 data: raw.baseAddress,
-                width: targetWidth,
-                height: targetHeight,
+                width: resolvedWidth,
+                height: resolvedHeight,
                 bitsPerComponent: 8,
-                bytesPerRow: targetWidth,
+                bytesPerRow: resolvedWidth,
                 space: CGColorSpaceCreateDeviceGray(),
                 bitmapInfo: CGImageAlphaInfo.none.rawValue
             ) else { return }
             context.interpolationQuality = .medium
-            context.draw(image, in: CGRect(x: 0, y: 0, width: targetWidth, height: targetHeight))
+            context.draw(image, in: CGRect(x: 0, y: 0, width: resolvedWidth, height: resolvedHeight))
         }
-        width = targetWidth
-        height = targetHeight
+        width = resolvedWidth
+        height = resolvedHeight
         bytes = storage
     }
 

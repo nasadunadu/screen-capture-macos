@@ -141,7 +141,7 @@ final class LongCaptureSession: ObservableObject {
 
         let signature = FrameSignature(frame)
         let newestSignature = pendingFrames.last?.signature ?? lastSignature
-        if let newestSignature, signature.distance(to: newestSignature) < 0.0025 { return }
+        if let newestSignature, signature.distance(to: newestSignature) < 0.0008 { return }
         guard previousFrame != nil else {
             do {
                 try append(frame, overlap: nil)
@@ -153,9 +153,13 @@ final class LongCaptureSession: ObservableObject {
         }
 
         if pendingFrames.count >= LongCapturePipelinePolicy.maximumPendingFrames {
-            pendingFrames = pendingFrames.enumerated().compactMap { index, candidate in
+            // Preserve the two earliest bridge frames closest to `previousFrame`
+            // so fast scrolling never loses its overlap anchor, and compact only the tail.
+            let preservedPrefix = Array(pendingFrames.prefix(2))
+            let compactedTail = pendingFrames.dropFirst(2).enumerated().compactMap { index, candidate in
                 index.isMultiple(of: 2) ? candidate : nil
             }
+            pendingFrames = preservedPrefix + compactedTail
             status = "正在追赶快速滚动并自动衔接…"
         }
         pendingFrames.append((frame, signature))
@@ -175,11 +179,33 @@ final class LongCaptureSession: ObservableObject {
               isRunning || isFinishing,
               !pendingFrames.isEmpty {
             guard let previous = previousFrame else { break }
-            let candidate = pendingFrames.removeFirst()
-            let alignment = await Task.detached(priority: .userInitiated) {
-                ScrollStitcher.alignment(previous: previous, next: candidate.image)
-            }.value
-            guard !Task.isCancelled, isRunning || isFinishing else { return }
+            let minimumDelta = max(6, previous.height / 160)
+
+            var candidateImage = pendingFrames.removeFirst().image
+            var alignment: FrameAlignment?
+
+            if pendingFrames.count >= 2 {
+                let lookaheadImage = pendingFrames[0].image
+                let stepTwoAlignment = await Task.detached(priority: .userInitiated) { [previous, lookaheadImage] in
+                    ScrollStitcher.alignment(previous: previous, next: lookaheadImage)
+                }.value
+                guard !Task.isCancelled, isRunning || isFinishing else { return }
+                if let stepTwoAlignment,
+                   stepTwoAlignment.scrollDelta >= minimumDelta,
+                   stepTwoAlignment.confidence >= 0.88 {
+                    _ = pendingFrames.removeFirst()
+                    candidateImage = lookaheadImage
+                    alignment = stepTwoAlignment
+                }
+            }
+
+            if alignment == nil {
+                let currentCandidateImage = candidateImage
+                alignment = await Task.detached(priority: .userInitiated) { [previous, currentCandidateImage] in
+                    ScrollStitcher.alignment(previous: previous, next: currentCandidateImage)
+                }.value
+                guard !Task.isCancelled, isRunning || isFinishing else { return }
+            }
 
             guard let alignment else {
                 consecutiveAlignmentFailures += 1
@@ -189,14 +215,14 @@ final class LongCaptureSession: ObservableObject {
                 continue
             }
 
-            let minimumDelta = max(10, previous.height / 120)
             guard alignment.scrollDelta >= minimumDelta else {
-                lastSignature = candidate.signature
+                // Keep `lastSignature` anchored to `previousFrame` so slow continuous
+                // scrolling accumulates delta instead of creeping the signature forward.
                 continue
             }
             do {
                 try append(
-                    candidate.image,
+                    candidateImage,
                     overlap: alignment.overlap,
                     trailingTrim: alignment.trailingTrim
                 )
@@ -226,11 +252,13 @@ final class LongCaptureSession: ObservableObject {
     ) throws {
         let segment: CGImage
         if let overlap {
-            if fixedFooterTrim == 0, trailingTrim > 0 {
-                try removeFixedFooterFromFirstSegment(trailingTrim)
+            let maxAllowedTrim = max(0, overlap - 1)
+            let desiredTrim = min(max(fixedFooterTrim, trailingTrim), maxAllowedTrim)
+            if desiredTrim > fixedFooterTrim {
+                let trimmed = trimOutputTail(by: desiredTrim - fixedFooterTrim)
+                fixedFooterTrim += trimmed
             }
-            fixedFooterTrim = max(fixedFooterTrim, trailingTrim)
-            let effectiveTrailingTrim = min(fixedFooterTrim, max(0, overlap - 1))
+            let effectiveTrailingTrim = min(fixedFooterTrim, maxAllowedTrim)
             segment = try ScrollStitcher.newContentSegment(
                 from: image,
                 overlap: overlap,
@@ -254,21 +282,44 @@ final class LongCaptureSession: ObservableObject {
         }
     }
 
-    private func removeFixedFooterFromFirstSegment(_ trim: Int) throws {
-        guard outputSegments.count == 1,
-              trim > 0,
-              trim < outputSegments[0].height,
-              let body = outputSegments[0].cropping(to: CGRect(
-                  x: 0,
-                  y: 0,
-                  width: outputSegments[0].width,
-                  height: outputSegments[0].height - trim
-              )) else { return }
-        outputSegments[0] = body
-        outputHeight -= trim
-        if previewSegments.count == 1 {
-            previewSegments[0] = NSImage(cgImage: body, size: .zero)
+    private func trimOutputTail(by deltaTrim: Int) -> Int {
+        guard deltaTrim > 0, !outputSegments.isEmpty else { return 0 }
+        var remaining = deltaTrim
+        var trimmedTotal = 0
+        while remaining > 0, let last = outputSegments.last {
+            let minKeepHeight = outputSegments.count == 1 ? max(1, last.height / 2) : 0
+            let availableToTrim = max(0, last.height - minKeepHeight)
+            guard availableToTrim > 0 else { break }
+
+            if remaining >= last.height, outputSegments.count > 1 {
+                outputSegments.removeLast()
+                outputHeight -= last.height
+                trimmedTotal += last.height
+                remaining -= last.height
+                if !previewSegments.isEmpty {
+                    previewSegments.removeLast()
+                }
+            } else {
+                let cut = min(remaining, availableToTrim)
+                let newHeight = last.height - cut
+                guard newHeight > 0,
+                      let cropped = last.cropping(to: CGRect(
+                          x: 0,
+                          y: 0,
+                          width: last.width,
+                          height: newHeight
+                      )) else { break }
+                outputSegments[outputSegments.count - 1] = cropped
+                outputHeight -= cut
+                trimmedTotal += cut
+                remaining -= cut
+                if previewSegments.count == outputSegments.count {
+                    previewSegments[previewSegments.count - 1] = NSImage(cgImage: cropped, size: .zero)
+                }
+                break
+            }
         }
+        return trimmedTotal
     }
 
     private func receiveProcessingError(_ error: Error) {
@@ -407,12 +458,15 @@ final class LongCaptureSession: ObservableObject {
         startupTask = nil
         analysisTask?.cancel()
         analysisTask = nil
-        for panel in guidePanels { panel.orderOut(nil) }
-        previewPanel?.orderOut(nil)
-        actionPanel?.orderOut(nil)
+        let guidesToRetire = guidePanels
+        let previewToRetire = previewPanel
+        let actionToRetire = actionPanel
         guidePanels.removeAll()
         previewPanel = nil
         actionPanel = nil
+        EditorPanel.retire(guidesToRetire)
+        EditorPanel.retire(previewToRetire)
+        EditorPanel.retire(actionToRetire)
         outputSegments.removeAll()
         previousFrame = nil
         pendingFrames.removeAll()

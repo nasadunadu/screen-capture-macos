@@ -47,6 +47,7 @@ final class SelectionOverlayController: NSObject {
         panel.level = .screenSaver
         panel.backgroundColor = .clear
         panel.isOpaque = false
+        panel.hasShadow = false
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.acceptsMouseMovedEvents = true
         panel.hidesOnDeactivate = false
@@ -146,16 +147,20 @@ final class SelectionOverlayController: NSObject {
     }
 
     private func finish(with result: SelectionResult) {
-        panel?.orderOut(nil)
+        let panelToRetire = panel
         panel = nil
+        selectionView?.tearDownSubviews()
         selectionView = nil
+        EditorPanel.retire(panelToRetire)
         onResult?(result)
     }
 
     func cancel() {
-        panel?.orderOut(nil)
+        let panelToRetire = panel
         panel = nil
+        selectionView?.tearDownSubviews()
         selectionView = nil
+        EditorPanel.retire(panelToRetire)
         onCancel?()
     }
 }
@@ -390,6 +395,13 @@ final class SelectionOverlayView: NSView {
         toolbarHostingView.isHidden = false
     }
 
+    func tearDownSubviews() {
+        annotationCanvas?.removeFromSuperview()
+        annotationCanvas = nil
+        toolbarHostingView?.removeFromSuperview()
+        toolbarHostingView = nil
+    }
+
     private func layoutToolbar(for localRect: CGRect) {
         guard mode != .window, let toolbarHostingView else { return }
         let globalRect = CGRect(
@@ -402,7 +414,10 @@ final class SelectionOverlayView: NSView {
         let frame = AnnotationEditorLayout.toolbarFrame(
             visibleFrame: screen.visibleFrame,
             selectionFrame: globalRect,
-            desiredSize: CGSize(width: ceil(fittingSize.width), height: 62)
+            desiredSize: CGSize(
+                width: ceil(fittingSize.width),
+                height: max(40, ceil(fittingSize.height))
+            )
         )
         toolbarHostingView.frame = frame
             .offsetBy(dx: -screen.frame.minX, dy: -screen.frame.minY)
@@ -455,7 +470,9 @@ final class SelectionOverlayView: NSView {
         canvas.allowsRegionMovement = true
         canvas.onConfirm = { [weak self] in self?.onConfirm?() }
         canvas.onCancel = { [weak self] in self?.onCancel?() }
-        canvas.onInteraction = { [weak self] in self?.keepToolbarVisible() }
+        canvas.onInteraction = { [weak self] in
+            self?.keepToolbarVisible()
+        }
         if let toolbarHostingView {
             addSubview(canvas, positioned: .below, relativeTo: toolbarHostingView)
         } else {

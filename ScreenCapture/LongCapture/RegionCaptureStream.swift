@@ -90,6 +90,7 @@ final class RegionCaptureStream: NSObject, SCStreamOutput, SCStreamDelegate, @un
             self.stream = nil
             return activeStream
         }) else { return }
+        try? stream.removeStreamOutput(self, type: .screen)
         try? await stream.stopCapture()
     }
 

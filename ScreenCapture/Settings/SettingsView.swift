@@ -256,7 +256,7 @@ struct SettingsView: View {
                     Button("重新检测") { refreshPermission() }
                     Button("打开系统设置") { ScreenCapturePermission.openSystemSettings() }
                 }
-                Text("截图像素仅在本机内存、剪贴板和你选择的文件夹中处理。应用不包含网络上传功能。")
+                Text("所有截图像素与拼接处理均完全在本机离线完成，不会向任何外部服务器上传数据。")
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }

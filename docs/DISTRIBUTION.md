@@ -17,12 +17,12 @@ This personal open-source project distributes the macOS app outside the Mac App 
 ./scripts/release/preflight.sh
 ```
 
-The preflight runs the full test suite, static analysis, property-list validation, and a universal unsigned Release build. It does not replace real UI, permission, multi-display, or oldest-macOS testing.
+The preflight runs the full test suite, static analysis, property-list validation, and an arm64-only unsigned Release build for macOS 14 or later. It does not replace real UI, permission, or multi-display testing.
 
 ## 2. Archive and export with Developer ID
 
 1. Open `ScreenCapture.xcodeproj` in Xcode.
-2. Select **Any Mac (Apple Silicon, Intel)**.
+2. Select the generic Mac destination; the project builds **arm64 only**, with a macOS 14 minimum, retaining macOS 14–26 compatibility. Intel Macs are unsupported.
 3. Choose **Product → Archive**.
 4. In Organizer, select **Distribute App → Developer ID**.
 5. Export a Developer ID signed app with Hardened Runtime and a secure timestamp.

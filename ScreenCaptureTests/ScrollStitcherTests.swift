@@ -187,6 +187,38 @@ final class ScrollStitcherTests: XCTestCase {
 
         let alignment = try XCTUnwrap(ScrollStitcher.alignment(previous: first, next: second))
         XCTAssertLessThanOrEqual(abs(alignment.scrollDelta - 140), 4)
+        XCTAssertEqual(alignment.trailingTrim, 0)
+    }
+
+    func testSparseDocumentWithStickyBottomComposerAlignsAndTrimsFooter() throws {
+        let full = makeDocument(width: 360, height: 1_100)
+        let footerHeight = 84
+        let frame1 = makeDocumentFrameWithStickyFooter(
+            document: full,
+            cropY: 0,
+            viewportHeight: 600,
+            footerHeight: footerHeight
+        )
+        let frame2 = makeDocumentFrameWithStickyFooter(
+            document: full,
+            cropY: 144,
+            viewportHeight: 600,
+            footerHeight: footerHeight
+        )
+        let frame3 = makeDocumentFrameWithStickyFooter(
+            document: full,
+            cropY: 288,
+            viewportHeight: 600,
+            footerHeight: footerHeight
+        )
+
+        let align12 = try XCTUnwrap(ScrollStitcher.alignment(previous: frame1, next: frame2))
+        XCTAssertLessThanOrEqual(abs(align12.scrollDelta - 144), 4)
+        XCTAssertGreaterThanOrEqual(align12.trailingTrim, footerHeight - 12)
+
+        let align23 = try XCTUnwrap(ScrollStitcher.alignment(previous: frame2, next: frame3))
+        XCTAssertLessThanOrEqual(abs(align23.scrollDelta - 144), 4)
+        XCTAssertLessThanOrEqual(abs(align23.trailingTrim - align12.trailingTrim), 4)
     }
 
     func testAlignmentPerformance() throws {
@@ -352,5 +384,42 @@ final class ScrollStitcherTests: XCTestCase {
             shouldInterpolate: false,
             intent: .defaultIntent
         )!
+    }
+
+    private func makeDocumentFrameWithStickyFooter(
+        document: CGImage,
+        cropY: Int,
+        viewportHeight: Int,
+        footerHeight: Int
+    ) -> CGImage {
+        let width = document.width
+        let bodyHeight = viewportHeight - footerHeight
+        let croppedBody = document.cropping(to: CGRect(
+            x: 0,
+            y: cropY,
+            width: width,
+            height: bodyHeight
+        ))!
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        let context = CGContext(
+            data: nil,
+            width: width,
+            height: viewportHeight,
+            bitsPerComponent: 8,
+            bytesPerRow: width * 4,
+            space: colorSpace,
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        )!
+        // In CoreGraphics bottom-left coordinates, body goes to the top (`y = footerHeight`)
+        // and sticky footer sits at the bottom (`y = 0..<footerHeight`).
+        context.draw(croppedBody, in: CGRect(x: 0, y: footerHeight, width: width, height: bodyHeight))
+        context.setFillColor(red: 0.98, green: 0.98, blue: 0.98, alpha: 1)
+        context.fill(CGRect(x: 0, y: 0, width: width, height: footerHeight))
+        context.setStrokeColor(red: 0.72, green: 0.72, blue: 0.75, alpha: 1)
+        context.setLineWidth(2)
+        context.stroke(CGRect(x: 16, y: 12, width: width - 32, height: footerHeight - 24))
+        context.setFillColor(red: 0.20, green: 0.20, blue: 0.22, alpha: 1)
+        context.fill(CGRect(x: 28, y: footerHeight / 2 - 2, width: width / 2, height: 4))
+        return context.makeImage()!
     }
 }

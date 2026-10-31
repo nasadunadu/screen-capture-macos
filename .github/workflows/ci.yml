@@ -35,3 +35,17 @@ jobs:
 
       - name: Validate project
         run: ./scripts/ci.sh
+
+  validate-xcode27:
+    name: Xcode 27 compatibility
+    runs-on: xcode-27
+    timeout-minutes: 30
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.0.app/Contents/Developer
+      DERIVED_DATA_PATH: ${{ github.workspace }}/build/GitHubActions27
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Validate project
+        run: ./scripts/ci.sh

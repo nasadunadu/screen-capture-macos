@@ -9,8 +9,8 @@ Screen Capture is an independently maintained personal open-source project distr
 - `plutil -lint` succeeds for `Info.plist` and `PrivacyInfo.xcprivacy`.
 - The complete unit test suite passes with code signing disabled.
 - Xcode static analysis succeeds for the application target.
-- A generic macOS Release build succeeds for both `arm64` and `x86_64`.
-- The final executable contains both architectures when Intel Macs are supported.
+- A generic macOS Release build succeeds for `arm64` only.
+- The final executable contains exactly `arm64`, and LSMinimumSystemVersion is 14.0. Intel Macs are unsupported.
 - `codesign --verify --deep --strict --verbose=2` succeeds.
 - The release entitlements do not contain `com.apple.security.get-task-allow`.
 - `spctl --assess --type execute --verbose=4` accepts the stapled app.
@@ -24,8 +24,8 @@ Test the actual archived Release build outside Xcode and without a debugger.
 
 | Area | Required coverage |
 | --- | --- |
-| Hardware | Apple silicon; Intel while universal binaries are published |
-| macOS | Oldest supported macOS 14; maintainer's current macOS; latest available macOS |
+| Hardware | Apple Silicon only; Intel is unsupported |
+| macOS | macOS 14 minimum; macOS 14–26 compatibility and macOS 27; report untested systems explicitly |
 | Displays | Retina and non-Retina; one display; mixed-scale multi-display |
 | Permission | Fresh install denied, grant and retry, revoked permission, app relaunch |
 | Capture | Region, resize/move region, window, full screen, previous area, preset, delay |

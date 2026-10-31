@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-31
+
+### Changed
+
+- Rebuilt the annotation floating toolbar with compact AI-era precision vector icons (`ToolbarVectorIcon`), tighter group spacing, hairline dividers, and a glassmorphic capsule shell.
+- Support Apple Silicon (`arm64`) only while retaining macOS 14–26 compatibility and adding Xcode 27 validation. Intel Macs are no longer supported; historical v0.4.14 downloads remain unchanged.
+- Validate with Xcode 27 and produce explicitly named `macos-arm64` packages instead of universal packages.
+- Make nested color-picker callback ownership explicit for the Swift 6.4 compiler.
+
+### Fixed
+
+- Hardened `WindowServer` stability on macOS 26/27 by replacing per-window `SCContentFilter` exclusions with process-level `excludingApplications` and retiring overlay/editor `NSPanel` instances safely across display cycles (`EditorPanel.retire`).
+- Eliminated scrolling-capture stalls and duplicate-band seams by decoupling fixed-header/footer overlap search from unmasked score gates, verifying stationary bottom edges with horizontal and vertical edge energy, incrementally trimming newly detected fixed footers from stitched output tails, and adding 1:1 native-pixel vertical seam refinement.
+- Fixed slow-scroll signature drift and preserved bridge frames with two-step lookahead during fast-scroll queue compaction.
+
 ## [0.4.14] - 2026-09-12
 
 ### Changed

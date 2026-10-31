@@ -23,9 +23,37 @@ final class EditorPanel: NSPanel {
             backing: backingStoreType,
             defer: flag
         )
+        isReleasedWhenClosed = false
+        isRestorable = false
         hidesOnDeactivate = false
+        animationBehavior = .none
     }
 
+    @MainActor
+    static func retire(_ panel: NSPanel?) {
+        guard let panel else { return }
+        if let sheet = panel.attachedSheet {
+            panel.endSheet(sheet, returnCode: .cancel)
+        }
+        for child in panel.childWindows ?? [] {
+            panel.removeChildWindow(child)
+        }
+        panel.parent?.removeChildWindow(panel)
+        panel.orderOut(nil)
+        panel.contentView = nil
+        // Extend the NSPanel lifetime past the current WindowServer display pass
+        // so CARenderUpdateValidateRestrictedLayerHosts never visits a deallocated CGSWindow.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            withExtendedLifetime(panel) {}
+        }
+    }
+
+    @MainActor
+    static func retire(_ panels: [NSPanel]) {
+        for panel in panels {
+            retire(panel)
+        }
+    }
 }
 
 private final class AnnotationDimmingView: NSView {
@@ -99,10 +127,13 @@ final class AnnotationEditorController: NSObject {
     func close() {
         exportTask?.cancel()
         exportTask = nil
-        dimmingPanels.forEach { $0.orderOut(nil) }
-        canvasPanel?.orderOut(nil)
+        let panelsToRetire = dimmingPanels
+        let canvasPanelToRetire = canvasPanel
         dimmingPanels.removeAll()
         canvasPanel = nil
+        canvas = nil
+        EditorPanel.retire(panelsToRetire)
+        EditorPanel.retire(canvasPanelToRetire)
         onClose?()
     }
 
@@ -132,7 +163,10 @@ final class AnnotationEditorController: NSObject {
         let toolbarFrame = AnnotationEditorLayout.toolbarFrame(
             visibleFrame: visible,
             selectionFrame: frame,
-            desiredSize: CGSize(width: ceil(fittingSize.width), height: 62)
+            desiredSize: CGSize(
+                width: ceil(fittingSize.width),
+                height: max(40, ceil(fittingSize.height))
+            )
         )
         let rootFrame = frame.union(toolbarFrame)
         let panel = EditorPanel(
@@ -195,6 +229,10 @@ final class AnnotationEditorController: NSObject {
             panel.level = .screenSaver
             panel.backgroundColor = .clear
             panel.isOpaque = false
+            panel.hasShadow = false
+            panel.isReleasedWhenClosed = false
+            panel.isRestorable = false
+            panel.animationBehavior = .none
             panel.ignoresMouseEvents = true
             panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
             panel.contentView = AnnotationDimmingView(frame: CGRect(origin: .zero, size: frame.size))

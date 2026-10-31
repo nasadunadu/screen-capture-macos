@@ -71,9 +71,9 @@ final class AnnotationToolbarTests: XCTestCase {
         )
         let size = NSHostingView(rootView: view).fittingSize
 
-        XCTAssertGreaterThan(size.width, 500)
-        XCTAssertLessThan(size.width, 820)
-        XCTAssertLessThanOrEqual(size.height, 64)
+        XCTAssertGreaterThan(size.width, 360)
+        XCTAssertLessThan(size.width, 520)
+        XCTAssertLessThanOrEqual(size.height, 48)
     }
 
     @MainActor

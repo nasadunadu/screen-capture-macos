@@ -30,9 +30,9 @@ Screen Capture is built for two everyday jobs: a fast annotated screenshot and a
 - Scrolling capture with a live viewport, borderless stitched preview, sticky-header handling, and fast-scroll recovery
 - Bounded long-image memory use, deterministic stitching, and cancellation with `Escape`
 - Menu-bar controls, editable global shortcuts, and silent launch
-- Local-only processing and a declared privacy manifest
+- Strict local-only processing: screenshot pixels never leave your Mac
 
-Screen recording, audio recording, translation, OCR, accounts, telemetry, and cloud upload are intentionally out of scope.
+Screen/audio recording, OCR, cloud translation, accounts, telemetry, and image upload are out of scope.
 
 <p align="center">
   <img src="docs/images/settings.png" width="880" alt="Native Screen Capture settings with editable shortcuts">
@@ -44,12 +44,13 @@ Screen recording, audio recording, translation, OCR, accounts, telemetry, and cl
 
 Download the signed, notarized app from [GitHub Releases](https://github.com/nasadunadu/screen-capture-macos/releases/latest). Open the DMG and drag ScreenCapture into Applications; a ZIP download is also provided. No Xcode installation is needed to use the app.
 
-`0.4.13` improves region selection: drag the crop with a hand cursor before explicitly choosing a drawing tool. See each release's notes for verification results and compatibility limits; automated validation does not replace testing on every supported Mac.
+`0.5.0` hardens `WindowServer` window-lifecycle stability on macOS 26/27, overhauls scrolling-capture alignment to prevent sticky-header/footer stalls and duplicate seams, redesigns the floating annotation toolbar with compact AI-era precision vector icons, and targets Apple Silicon (`arm64`) natively. See each release's notes for verification results and compatibility limits; automated validation does not replace testing on every supported Mac.
 
 ## Requirements
 
+- `v0.5.0` and later support **Apple Silicon (`arm64`) only**, including macOS 14–26 and macOS 27. **Intel Macs are not supported**. Intel users can use the historical [v0.4.14 release](https://github.com/nasadunadu/screen-capture-macos/releases/tag/v0.4.14), which is not changed by this migration.
 - macOS 14 or later
-- Xcode 26 or later for development
+- Xcode 27 or later for development
 - Screen Recording permission when the first capture starts
 
 ## Build and run
@@ -84,7 +85,7 @@ All capture shortcuts can be changed in **Settings → Capture**.
 ./scripts/ci.sh
 ```
 
-The validation script checks property lists, runs the complete unit-test suite, performs Xcode static analysis, and produces an unsigned universal Release build. See [release checks](docs/RELEASE_CHECKLIST.md) and [distribution](docs/DISTRIBUTION.md) for the remaining manual, signing, and notarization gates.
+The validation script checks property lists, runs the complete unit-test suite, performs Xcode static analysis, and produces an unsigned Apple Silicon Release build. See [release checks](docs/RELEASE_CHECKLIST.md) and [distribution](docs/DISTRIBUTION.md) for the remaining manual, signing, and notarization gates.
 
 ## Known limitations
 

@@ -23,11 +23,13 @@ VERSION=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$INFO_
 BIN="$APP/Contents/MacOS/ScreenCapture"
 ARCHITECTURES=$(lipo -archs "$BIN")
 [[ " $ARCHITECTURES " == *" arm64 "* ]] || { echo "Missing arm64 slice" >&2; exit 1; }
-[[ " $ARCHITECTURES " == *" x86_64 "* ]] || { echo "Missing x86_64 slice" >&2; exit 1; }
+[[ "$ARCHITECTURES" == "arm64" ]] || { echo "Only arm64 is supported" >&2; exit 1; }
+MINIMUM_SYSTEM=$(/usr/libexec/PlistBuddy -c 'Print :LSMinimumSystemVersion' "$APP/Contents/Info.plist")
+[[ "$MINIMUM_SYSTEM" == "14.0" ]] || { echo "Expected macOS 14.0 minimum" >&2; exit 1; }
 
 mkdir -p "$OUTPUT_DIR"
 
-BASENAME="ScreenCapture-$VERSION-macos-universal"
+BASENAME="ScreenCapture-$VERSION-macos-arm64"
 DMG="$OUTPUT_DIR/$BASENAME.dmg"
 ZIP="$OUTPUT_DIR/$BASENAME.zip"
 DMG_CHECKSUM="$DMG.sha256"

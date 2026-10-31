@@ -3,13 +3,13 @@
 ## Scope
 
 - This repository is the canonical source for the personal macOS screenshot app.
-- The first release covers normal screenshots, inline annotation, scrolling capture, export, menu-bar access, and shortcuts.
-- Do not add screen recording, audio recording, translation, or OCR unless the owner expands scope.
+- The release scope covers normal screenshots, inline annotation, scrolling capture, export, menu-bar access, and shortcuts.
+- Standalone OCR, translation, screen/audio recording, and cloud uploads remain out of scope.
 
 ## Stack
 
 - Swift, SwiftUI, AppKit, ScreenCaptureKit, Core Graphics, Core Image, and Accelerate.
-- Minimum supported system: macOS 14.
+- Minimum supported system: macOS 14, including compatibility with macOS 14–26 and macOS 27. Apple Silicon (arm64) only; Intel Macs are unsupported.
 - Keep the app local-first. Screenshot pixels must not leave the Mac.
 
 ## Validation

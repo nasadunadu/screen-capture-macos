@@ -5,9 +5,9 @@ Screen Capture is designed around a simple boundary: screenshot pixels stay on t
 ## Data handling
 
 - Captured pixels are processed in local memory.
-- The app does not send screenshots, annotations, preferences, or usage events over the network.
+- The app does not send screenshot images, annotations, preferences, or usage events over the network.
 - The app has no account system, analytics SDK, advertising SDK, crash-reporting SDK, or cloud service.
-- The app stores only user preferences in `UserDefaults`.
+- The app stores user preferences in `UserDefaults`.
 - Clipboard and file writes occur only after an explicit user action.
 
 ## Permissions

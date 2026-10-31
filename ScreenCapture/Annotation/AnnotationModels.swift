@@ -29,12 +29,12 @@ enum AnnotationTool: String, CaseIterable, Identifiable {
     var systemImage: String {
         switch self {
         case .select: "cursorarrow"
-        case .rectangle: "rectangle"
-        case .ellipse: "circle"
+        case .rectangle: "rectangle.dashed"
+        case .ellipse: "oval"
         case .line: "line.diagonal"
         case .arrow: "arrow.up.right"
-        case .pen: "pencil"
-        case .text: "textformat"
+        case .pen: "scribble.variable"
+        case .text: "character.cursor.ibeam"
         case .spotlight: "square.inset.filled"
         }
     }

@@ -55,5 +55,25 @@ final class SelectionInteractionTests: XCTestCase {
         canvas.mouseUp(with: try event(.leftMouseUp, 320, 280))
         XCTAssertEqual(document.elements.count, 1)
         XCTAssertEqual(document.elements.first?.tool, .arrow)
+
+        view.tearDownSubviews()
+        XCTAssertTrue(view.subviews.isEmpty)
+    }
+
+    @MainActor
+    func testEditorPanelRetireDetachesContentViewAndOrdersOutSafely() {
+        let panel = EditorPanel(
+            contentRect: CGRect(x: 0, y: 0, width: 200, height: 120),
+            styleMask: [.borderless, .nonactivatingPanel],
+            backing: .buffered,
+            defer: false
+        )
+        XCTAssertFalse(panel.isReleasedWhenClosed)
+        XCTAssertEqual(panel.animationBehavior, .none)
+        let host = NSView(frame: CGRect(x: 0, y: 0, width: 200, height: 120))
+        panel.contentView = host
+        EditorPanel.retire(panel)
+        XCTAssertNil(panel.contentView)
+        XCTAssertFalse(panel.isVisible)
     }
 }
